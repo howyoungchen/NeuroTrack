@@ -1,0 +1,127 @@
+<resources>
+    <string name="app_name">NeuroTrack</string>
+    <string name="app_name_zh">心迹</string>
+    <string name="nav_assessment">自测</string>
+    <string name="nav_status">状态</string>
+    <string name="nav_settings">设置</string>
+
+    <string name="notification_channel_warning">压力告警</string>
+    <string name="notification_channel_warning_desc">当压力等级超过 5 分时发送提醒。</string>
+    <string name="notification_channel_reminder">自测提醒</string>
+    <string name="notification_channel_reminder_desc">当最近 7 天没有自测时提醒完成评测。</string>
+    <string name="stress_warning_notification_title">压力等级偏高</string>
+    <string name="stress_warning_notification_text">当前压力等级为 %1$.1f/10，建议尽快安排休息。</string>
+    <string name="reminder_notification_title">该做一次状态自测了</string>
+    <string name="reminder_notification_text">最近一周还没有记录，花一分钟了解当前状态。</string>
+    <string name="share_logs_title">导出心迹日志</string>
+
+    <string name="assessment_title">过去一周自测</string>
+    <string name="assessment_subtitle">选择最符合过去一周状态的选项。</string>
+    <string name="assessment_progress">%1$d/%2$d 已回答</string>
+    <string name="assessment_submit">提交自测</string>
+    <string name="assessment_result_title">本次得分 %1$d/30</string>
+    <string name="assessment_feedback_low">当前压力较低，继续保持规律作息和温和活动。</string>
+    <string name="assessment_feedback_medium">近期压力有一定累积，建议安排休息并观察睡眠变化。</string>
+    <string name="assessment_feedback_high">压力水平偏高，请减少负荷；若症状严重或持续，请联系专业人士。</string>
+    <string name="assessment_history_title">历史记录</string>
+    <string name="assessment_history_empty">还没有自测记录。</string>
+    <string name="assessment_history_item">%1$s · %2$d/30</string>
+    <string name="assessment_result_close">知道了</string>
+
+    <string-array name="assessment_questions">
+        <item>感到紧张、焦虑或烦躁</item>
+        <item>无法停止或控制担忧</item>
+        <item>对各种事情过度担心</item>
+        <item>难以放松</item>
+        <item>坐立不安、难以静坐</item>
+        <item>容易恼怒或易被激惹</item>
+        <item>感到害怕，仿佛将有可怕的事发生</item>
+        <item>入睡困难或睡眠质量差</item>
+        <item>疲乏、精力不足</item>
+        <item>躯体不适，如心悸、手抖、出汗、头痛</item>
+    </string-array>
+    <string-array name="likert_options">
+        <item>完全没有</item>
+        <item>有几天</item>
+        <item>一半以上时间</item>
+        <item>几乎每天</item>
+    </string-array>
+
+    <string name="status_title">当前状态</string>
+    <string name="status_no_data">暂无数据，请先完成自测。</string>
+    <string name="status_go_assessment">去自测</string>
+    <string name="status_stress_level">压力等级</string>
+    <string name="status_stress_format">%1$.1f</string>
+    <string name="status_stress_low">状态相对平稳，继续关注睡眠和日常节奏。</string>
+    <string name="status_stress_medium">压力处于中等水平，建议主动安排恢复时间。</string>
+    <string name="status_stress_high">压力偏高，请降低负荷；如有明显不适请及时就医。</string>
+    <string name="status_latest_assessment">最新自测</string>
+    <string name="status_trend_assessment">月度趋势</string>
+    <string name="status_sleep_penalty">睡眠扣分</string>
+    <string name="status_pressure_scale">压力等级 0–10</string>
+    <string name="status_pressure_scale_hint">低 · 中 · 高</string>
+    <string name="status_sleep_yesterday">昨日睡眠状态</string>
+    <string name="status_sleep_duration">睡眠时长</string>
+    <string name="status_bedtime">入睡时间</string>
+    <string name="status_wake_time">起床时间</string>
+    <string name="status_sleep_week">近一周睡眠状态</string>
+    <string name="status_sleep_month">近一个月睡眠状态</string>
+    <string name="status_sleep_window">入睡与起床时间</string>
+    <string name="status_insights">趋势洞察</string>
+    <string name="status_insight_no_sleep">睡眠数据不足，开启监测服务后会自动生成。</string>
+    <string name="status_insight_later">近 7 天入睡时间呈变晚趋势。</string>
+    <string name="status_insight_irregular">入睡时间波动较大，作息不够稳定。</string>
+    <string name="status_insight_short">近 7 天平均睡眠时长不足。</string>
+    <string name="status_insight_drop">最近一次睡眠时长较前几天明显下降。</string>
+    <string name="status_insight_late_average">平均入睡时间晚于凌晨 1 点。</string>
+    <string name="status_insight_stable">近 7 天睡眠趋势暂无明显风险信号。</string>
+    <string name="status_hours_format">%1$.1f 小时</string>
+    <string name="status_score_format">%1$.1f/10</string>
+    <string name="status_missing">暂无</string>
+    <string name="chart_empty">暂无可绘制数据</string>
+
+    <string name="settings_title">设置</string>
+    <string name="settings_permissions">权限获取</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_runtime">睡眠监测</string>
+    <string name="settings_reminder">评测提醒</string>
+    <string name="settings_logs">日志导出</string>
+    <string name="permission_notifications">通知权限</string>
+    <string name="permission_notifications_desc">用于发送每周自测提醒和压力过高警告。</string>
+    <string name="permission_battery">电池优化白名单</string>
+    <string name="permission_battery_desc">有助于提升屏幕亮灭事件监测的稳定性。</string>
+    <string name="permission_exact_alarm">精确闹钟</string>
+    <string name="permission_exact_alarm_desc">如系统要求，可用于提高提醒触达时间的准确性。</string>
+    <string name="permission_usage_desc">通过定时记录屏幕亮灭事件，反推过去 24 小时的清醒/睡眠状态。</string>
+    <string name="permission_granted">已授予</string>
+    <string name="permission_missing">未授予</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_license">许可证：个人与非商业使用</string>
+    <string name="about_project">项目地址：https://github.com/example/NeuroTrack</string>
+    <string name="disclaimer_title">免责声明</string>
+    <string name="disclaimer_body">本应用不构成医疗诊断或治疗建议，评估结果仅供参考。如有严重症状、持续恶化或自伤风险，请及时就医或联系当地紧急求助服务。</string>
+    <string name="language_zh">中文</string>
+    <string name="language_en">English</string>
+    <string name="theme_system">根据系统</string>
+    <string name="theme_light">白</string>
+    <string name="theme_dark">黑</string>
+    <string name="service_switch">屏幕事件监测</string>
+    <string name="service_uptime">已连续运行 %1$s</string>
+    <string name="service_not_running">监测未运行</string>
+    <string name="reminder_day">星期</string>
+    <string name="reminder_hour">时间</string>
+    <string name="reminder_rule">仅当最近 7 天没有任何自测记录时发送通知。</string>
+    <string name="export_logs">导出日志</string>
+
+    <string-array name="weekdays">
+        <item>周一</item>
+        <item>周二</item>
+        <item>周三</item>
+        <item>周四</item>
+        <item>周五</item>
+        <item>周六</item>
+        <item>周日</item>
+    </string-array>
+</resources>

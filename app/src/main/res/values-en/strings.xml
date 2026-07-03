@@ -1,0 +1,127 @@
+<resources>
+    <string name="app_name">NeuroTrack</string>
+    <string name="app_name_zh">Xinji</string>
+    <string name="nav_assessment">Assessment</string>
+    <string name="nav_status">Status</string>
+    <string name="nav_settings">Settings</string>
+
+    <string name="notification_channel_warning">Pressure alerts</string>
+    <string name="notification_channel_warning_desc">Alerts you when the pressure level is above 5.</string>
+    <string name="notification_channel_reminder">Assessment reminders</string>
+    <string name="notification_channel_reminder_desc">Reminds you when no assessment was recorded in the past 7 days.</string>
+    <string name="stress_warning_notification_title">Pressure level is elevated</string>
+    <string name="stress_warning_notification_text">Current pressure is %1$.1f/10. Consider resting soon.</string>
+    <string name="reminder_notification_title">Time for a status check</string>
+    <string name="reminder_notification_text">No assessment was recorded this week. Take a minute to check in.</string>
+    <string name="share_logs_title">Export NeuroTrack logs</string>
+
+    <string name="assessment_title">Past-week assessment</string>
+    <string name="assessment_subtitle">Choose the option that best matches the past week.</string>
+    <string name="assessment_progress">%1$d/%2$d answered</string>
+    <string name="assessment_submit">Submit assessment</string>
+    <string name="assessment_result_title">Score %1$d/30</string>
+    <string name="assessment_feedback_low">Current pressure is low. Keep a steady routine and gentle activity.</string>
+    <string name="assessment_feedback_medium">Pressure has accumulated recently. Consider rest and watch sleep changes.</string>
+    <string name="assessment_feedback_high">Pressure is elevated. Reduce load; seek professional help if symptoms are severe or persistent.</string>
+    <string name="assessment_history_title">History</string>
+    <string name="assessment_history_empty">No assessment records yet.</string>
+    <string name="assessment_history_item">%1$s · %2$d/30</string>
+    <string name="assessment_result_close">OK</string>
+
+    <string-array name="assessment_questions">
+        <item>Feeling nervous, anxious, or irritable</item>
+        <item>Unable to stop or control worrying</item>
+        <item>Worrying too much about different things</item>
+        <item>Trouble relaxing</item>
+        <item>Restless and hard to sit still</item>
+        <item>Becoming easily annoyed or irritated</item>
+        <item>Feeling afraid, as if something bad might happen</item>
+        <item>Trouble falling asleep or poor sleep quality</item>
+        <item>Fatigue or low energy</item>
+        <item>Physical discomfort such as palpitations, shaking, sweating, or headache</item>
+    </string-array>
+    <string-array name="likert_options">
+        <item>Not at all</item>
+        <item>Several days</item>
+        <item>More than half the days</item>
+        <item>Nearly every day</item>
+    </string-array>
+
+    <string name="status_title">Current status</string>
+    <string name="status_no_data">No data yet. Please complete an assessment first.</string>
+    <string name="status_go_assessment">Start assessment</string>
+    <string name="status_stress_level">Pressure level</string>
+    <string name="status_stress_format">%1$.1f</string>
+    <string name="status_stress_low">Status looks relatively steady. Keep tracking sleep and routine.</string>
+    <string name="status_stress_medium">Pressure is moderate. Schedule intentional recovery time.</string>
+    <string name="status_stress_high">Pressure is high. Reduce load; seek care if discomfort is significant.</string>
+    <string name="status_latest_assessment">Latest assessment</string>
+    <string name="status_trend_assessment">Monthly trend</string>
+    <string name="status_sleep_penalty">Sleep penalty</string>
+    <string name="status_pressure_scale">Pressure level 0–10</string>
+    <string name="status_pressure_scale_hint">Low · Medium · High</string>
+    <string name="status_sleep_yesterday">Yesterday sleep status</string>
+    <string name="status_sleep_duration">Duration</string>
+    <string name="status_bedtime">Bedtime</string>
+    <string name="status_wake_time">Wake time</string>
+    <string name="status_sleep_week">Past week sleep status</string>
+    <string name="status_sleep_month">Past month sleep status</string>
+    <string name="status_sleep_window">Sleep and wake times</string>
+    <string name="status_insights">Trend insights</string>
+    <string name="status_insight_no_sleep">Sleep data is insufficient. Enable monitoring to generate records automatically.</string>
+    <string name="status_insight_later">Bedtime is trending later over the past 7 days.</string>
+    <string name="status_insight_irregular">Bedtime varies widely, suggesting an unstable routine.</string>
+    <string name="status_insight_short">Average sleep duration is low over the past 7 days.</string>
+    <string name="status_insight_drop">The latest sleep duration dropped clearly from previous days.</string>
+    <string name="status_insight_late_average">Average bedtime is later than 1:00 AM.</string>
+    <string name="status_insight_stable">No clear sleep risk signal in the past 7 days.</string>
+    <string name="status_hours_format">%1$.1f h</string>
+    <string name="status_score_format">%1$.1f/10</string>
+    <string name="status_missing">N/A</string>
+    <string name="chart_empty">No chartable data</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_permissions">Permissions</string>
+    <string name="settings_about">About</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_runtime">Sleep monitoring</string>
+    <string name="settings_reminder">Assessment reminder</string>
+    <string name="settings_logs">Log export</string>
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_notifications_desc">Used for weekly assessment reminders and elevated-pressure alerts.</string>
+    <string name="permission_battery">Battery optimization allowlist</string>
+    <string name="permission_battery_desc">Helps make screen-event monitoring more stable.</string>
+    <string name="permission_exact_alarm">Exact alarm</string>
+    <string name="permission_exact_alarm_desc">Can improve reminder timing when required by the system.</string>
+    <string name="permission_usage_desc">Screen on/off events are recorded regularly to infer awake/sleep state over the past 24 hours.</string>
+    <string name="permission_granted">Granted</string>
+    <string name="permission_missing">Missing</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_license">License: personal and non-commercial use</string>
+    <string name="about_project">Project: https://github.com/example/NeuroTrack</string>
+    <string name="disclaimer_title">Disclaimer</string>
+    <string name="disclaimer_body">This app does not provide medical diagnosis or treatment advice. Assessment results are for reference only. If symptoms are severe, worsening, or include self-harm risk, seek medical care or local emergency help promptly.</string>
+    <string name="language_zh">中文</string>
+    <string name="language_en">English</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="service_switch">Screen event monitoring</string>
+    <string name="service_uptime">Running for %1$s</string>
+    <string name="service_not_running">Monitoring is not running</string>
+    <string name="reminder_day">Day</string>
+    <string name="reminder_hour">Time</string>
+    <string name="reminder_rule">A notification is sent only when no assessment exists in the past 7 days.</string>
+    <string name="export_logs">Export logs</string>
+
+    <string-array name="weekdays">
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+        <item>Sun</item>
+    </string-array>
+</resources>
