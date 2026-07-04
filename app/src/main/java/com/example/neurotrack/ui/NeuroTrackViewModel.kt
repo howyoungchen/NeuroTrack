@@ -10,7 +10,6 @@ import com.example.neurotrack.AppSettings
 import com.example.neurotrack.NeuroTrackApplication
 import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.background.LogExporter
-import com.example.neurotrack.background.MonitoringServiceController
 import com.example.neurotrack.background.NeuroWorkScheduler
 import com.example.neurotrack.background.NotificationHelper
 import com.example.neurotrack.data.AssessmentRecordEntity
@@ -18,8 +17,6 @@ import com.example.neurotrack.data.NeuroRepository
 import com.example.neurotrack.data.SleepRecordEntity
 import com.example.neurotrack.domain.StressCalculator
 import com.example.neurotrack.domain.StressResult
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,7 +24,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.util.concurrent.TimeUnit
 
 data class NeuroTrackUiState(
     val assessments: List<AssessmentRecordEntity> = emptyList(),
@@ -40,8 +36,6 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
     private val repository: NeuroRepository = app.container.repository
     private val settingsStore: SettingsStore = app.container.settingsStore
     private val _latestSubmission = MutableStateFlow<AssessmentRecordEntity?>(null)
-    private val _serviceUptimeMillis = MutableStateFlow(0L)
-    private var uptimeJob: Job? = null
 
     val settings: StateFlow<AppSettings> = settingsStore.settings
     val latestSubmission: StateFlow<AssessmentRecordEntity?> = _latestSubmission
@@ -60,12 +54,6 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = NeuroTrackUiState(),
     )
-
-    val serviceUptimeMillis: StateFlow<Long> = _serviceUptimeMillis
-
-    init {
-        startUptimeTicker()
-    }
 
     fun submitAssessment(answers: List<Int>) {
         viewModelScope.launch {
@@ -97,13 +85,6 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
         settingsStore.setThemeMode(themeMode)
     }
 
-    fun setMonitoringEnabled(enabled: Boolean) {
-        MonitoringServiceController.setMonitoringEnabled(getApplication(), settingsStore, enabled)
-        viewModelScope.launch {
-            repository.log("INFO", "Settings", "Monitoring service enabled=$enabled")
-        }
-    }
-
     fun setReminder(dayOfWeek: Int, hour: Int) {
         settingsStore.setReminder(dayOfWeek, hour)
         NeuroWorkScheduler.scheduleAssessmentReminder(getApplication(), settingsStore.settings.value)
@@ -117,28 +98,6 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
             val intent = LogExporter.createShareIntent(context, repository)
             context.startActivity(intent)
             repository.log("INFO", "Logs", "Log export shared")
-        }
-    }
-
-    override fun onCleared() {
-        uptimeJob?.cancel()
-        super.onCleared()
-    }
-
-    private fun startUptimeTicker() {
-        uptimeJob = viewModelScope.launch {
-            while (true) {
-                val startedAt = settingsStore.serviceStartedAtMillis()
-                _serviceUptimeMillis.value = if (
-                    settingsStore.settings.value.monitoringEnabled &&
-                    startedAt > 0L
-                ) {
-                    System.currentTimeMillis() - startedAt
-                } else {
-                    0L
-                }
-                delay(TimeUnit.SECONDS.toMillis(1))
-            }
         }
     }
 

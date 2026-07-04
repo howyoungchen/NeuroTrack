@@ -1,7 +1,6 @@
 package com.example.neurotrack.ui
 
 import android.Manifest
-import android.app.AlarmManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -46,10 +45,9 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -61,6 +59,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -68,7 +67,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -139,7 +137,6 @@ fun NeuroTrackRoot(
     LocalizedResources(settings.languageTag) {
         val uiState by viewModel.uiState.collectAsState()
         val latestSubmission by viewModel.latestSubmission.collectAsState()
-        val serviceUptime by viewModel.serviceUptimeMillis.collectAsState()
 
         Scaffold(
             topBar = {
@@ -200,10 +197,8 @@ fun NeuroTrackRoot(
 
                     AppScreen.Settings -> SettingsScreen(
                         settings = settings,
-                        serviceUptimeMillis = serviceUptime,
                         onLanguageChange = viewModel::setLanguage,
                         onThemeModeChange = viewModel::setThemeMode,
-                        onMonitoringChange = viewModel::setMonitoringEnabled,
                         onReminderChange = viewModel::setReminder,
                         onExportLogs = viewModel::exportLogs,
                     )
@@ -672,13 +667,9 @@ private fun StressGradientBar(score: Double?) {
 
 @Composable
 private fun YesterdaySleepStatusCard(records: List<SleepRecordEntity>) {
-    val record = remember(records) {
-        val today = LocalDate.now().toEpochDay()
-        val yesterday = today - 1
-        records
-            .filter { !it.isMissing && it.durationMinutes > 0 }
-            .firstOrNull { it.dateEpochDay == yesterday }
-            ?: records.firstOrNull { !it.isMissing && it.durationMinutes > 0 && it.dateEpochDay == today }
+    val today = LocalDate.now().toEpochDay()
+    val record = remember(records, today) {
+        latestSleepRecordForDisplay(records, today)
     }
 
     ChartCard(title = stringResource(R.string.status_sleep_yesterday), icon = Icons.Rounded.Schedule) {
@@ -696,17 +687,24 @@ private fun YesterdaySleepStatusCard(records: List<SleepRecordEntity>) {
     }
 }
 
+internal fun latestSleepRecordForDisplay(
+    records: List<SleepRecordEntity>,
+    todayEpochDay: Long = LocalDate.now().toEpochDay(),
+): SleepRecordEntity? =
+    records
+        .asSequence()
+        .filter { !it.isMissing && it.durationMinutes > 0 && it.dateEpochDay <= todayEpochDay }
+        .maxByOrNull { it.dateEpochDay }
+
 @Composable
 private fun SleepStatusPeriodCard(
     title: String,
     records: List<SleepRecordEntity>,
     days: Int,
 ) {
-    val data = remember(records, days) {
-        records
-            .filter { !it.isMissing && it.durationMinutes > 0 }
-            .sortedBy { it.dateEpochDay }
-            .takeLast(days)
+    val today = LocalDate.now()
+    val data = remember(records, days, today) {
+        sleepRecordsForPeriod(records, today, days)
     }
 
     ChartCard(title, icon = Icons.Rounded.Schedule) {
@@ -723,10 +721,25 @@ private fun SleepStatusPeriodCard(
         )
         if (data.isEmpty()) {
             EmptyText(stringResource(R.string.chart_empty))
+        } else if (days <= 7) {
+            SleepDailyDurationBars(records = data, today = today)
         } else {
-            SleepDurationBars(data)
+            SleepMonthlyAverageBars(records = data, today = today)
         }
     }
+}
+
+internal fun sleepRecordsForPeriod(
+    records: List<SleepRecordEntity>,
+    today: LocalDate = LocalDate.now(),
+    days: Int,
+): List<SleepRecordEntity> {
+    val endEpochDay = today.toEpochDay()
+    val startEpochDay = today.minusDays((days - 1).toLong()).toEpochDay()
+    return records
+        .filter { !it.isMissing && it.durationMinutes > 0 }
+        .filter { it.dateEpochDay in startEpochDay..endEpochDay }
+        .sortedBy { it.dateEpochDay }
 }
 
 @Composable
@@ -784,34 +797,155 @@ private fun SleepMetricColumn(
     }
 }
 
+private data class SleepDurationPoint(
+    val date: LocalDate,
+    val durationMinutes: Float?,
+)
+
 @Composable
-private fun SleepDurationBars(data: List<SleepRecordEntity>) {
-    val color = MaterialTheme.colorScheme.primary
-    val track = MaterialTheme.colorScheme.surfaceVariant
+private fun SleepDailyDurationBars(
+    records: List<SleepRecordEntity>,
+    today: LocalDate,
+) {
+    val weekdays = stringArrayResource(R.array.weekdays).toList()
+    val points = remember(records, today) {
+        dailySleepDurationPoints(records = records, today = today, days = 7)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SleepDurationBars(points = points)
+        SleepChartLabels(
+            labels = points.map { point ->
+                weekdays[point.date.dayOfWeek.value - 1]
+            },
+        )
+    }
+}
+
+@Composable
+private fun SleepMonthlyAverageBars(
+    records: List<SleepRecordEntity>,
+    today: LocalDate,
+) {
+    val points = remember(records, today) {
+        monthlySleepAveragePoints(records = records, today = today)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SleepDurationBars(points = points)
+        SleepChartLabels(labels = points.map { formatMonthDay(it.date) })
+    }
+}
+
+@Composable
+private fun SleepDurationBars(points: List<SleepDurationPoint>) {
+    val primary = MaterialTheme.colorScheme.primary
+    val shortSleep = MaterialTheme.colorScheme.tertiary
+    val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+    val guide = MaterialTheme.colorScheme.outlineVariant
     Canvas(
         modifier = Modifier
             .fillMaxWidth()
-            .height(126.dp),
+            .height(116.dp),
     ) {
-        val maxMinutes = maxOf(480f, data.maxOf { it.durationMinutes }.toFloat())
-        val slotWidth = size.width / data.size
-        data.forEachIndexed { index, record ->
-            val height = (record.durationMinutes / maxMinutes) * size.height
-            val barWidth = (slotWidth * 0.46f).coerceAtLeast(3.dp.toPx())
+        if (points.isEmpty()) return@Canvas
+
+        val maxMinutes = maxOf(600f, points.mapNotNull { it.durationMinutes }.maxOrNull() ?: 0f)
+        val topPadding = 6.dp.toPx()
+        val bottomPadding = 4.dp.toPx()
+        val chartHeight = size.height - topPadding - bottomPadding
+        if (chartHeight <= 0f) return@Canvas
+
+        val bottom = topPadding + chartHeight
+        val slotWidth = size.width / points.size
+        val barWidth = minOf(slotWidth * 0.42f, 26.dp.toPx()).coerceAtLeast(5.dp.toPx())
+        val targetY = bottom - (480f / maxMinutes).coerceIn(0f, 1f) * chartHeight
+
+        drawLine(
+            color = guide,
+            start = Offset(0f, targetY),
+            end = Offset(size.width, targetY),
+            strokeWidth = 1.dp.toPx(),
+        )
+
+        points.forEachIndexed { index, point ->
             val left = index * slotWidth + (slotWidth - barWidth) / 2
+            val corner = CornerRadius(barWidth / 2f, barWidth / 2f)
             drawRoundRect(
                 color = track,
-                topLeft = Offset(left, 0f),
-                size = Size(barWidth, size.height),
-                cornerRadius = CornerRadius(8f, 8f),
+                topLeft = Offset(left, topPadding),
+                size = Size(barWidth, chartHeight),
+                cornerRadius = corner,
             )
-            drawRoundRect(
-                color = color,
-                topLeft = Offset(left, size.height - height),
-                size = Size(barWidth, height),
-                cornerRadius = CornerRadius(8f, 8f),
-            )
+            point.durationMinutes?.let { minutes ->
+                val barHeight = ((minutes / maxMinutes).coerceIn(0f, 1f) * chartHeight)
+                    .coerceAtLeast(4.dp.toPx())
+                drawRoundRect(
+                    color = if (minutes < 360f) shortSleep else primary,
+                    topLeft = Offset(left, bottom - barHeight),
+                    size = Size(barWidth, barHeight),
+                    cornerRadius = corner,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SleepChartLabels(labels: List<String>) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        labels.forEach { label ->
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                )
+            }
+        }
+    }
+}
+
+private fun dailySleepDurationPoints(
+    records: List<SleepRecordEntity>,
+    today: LocalDate,
+    days: Int,
+): List<SleepDurationPoint> {
+    val startDate = today.minusDays((days - 1).toLong())
+    val recordsByDay = records.associateBy { it.dateEpochDay }
+    return (0 until days).map { offset ->
+        val date = startDate.plusDays(offset.toLong())
+        SleepDurationPoint(
+            date = date,
+            durationMinutes = recordsByDay[date.toEpochDay()]?.durationMinutes?.toFloat(),
+        )
+    }
+}
+
+private fun monthlySleepAveragePoints(
+    records: List<SleepRecordEntity>,
+    today: LocalDate,
+): List<SleepDurationPoint> {
+    val startDate = today.minusDays(29)
+    return (0 until 5).map { bucketIndex ->
+        val bucketStart = startDate.plusDays((bucketIndex * 7).toLong())
+        val bucketEnd = bucketStart.plusDays(6).let { end ->
+            if (end.isAfter(today)) today else end
+        }
+        val startEpochDay = bucketStart.toEpochDay()
+        val endEpochDay = bucketEnd.toEpochDay()
+        val durations = records
+            .filter { it.dateEpochDay in startEpochDay..endEpochDay }
+            .map { it.durationMinutes }
+        SleepDurationPoint(
+            date = bucketStart,
+            durationMinutes = durations.takeIf { it.isNotEmpty() }?.average()?.toFloat(),
+        )
     }
 }
 
@@ -1029,10 +1163,8 @@ private fun InsightsCard(metrics: SleepPenaltyMetrics) {
 @Composable
 private fun SettingsScreen(
     settings: com.example.neurotrack.AppSettings,
-    serviceUptimeMillis: Long,
     onLanguageChange: (String) -> Unit,
     onThemeModeChange: (String) -> Unit,
-    onMonitoringChange: (Boolean) -> Unit,
     onReminderChange: (Int, Int) -> Unit,
     onExportLogs: (Context) -> Unit,
 ) {
@@ -1050,9 +1182,6 @@ private fun SettingsScreen(
         }
         item {
             ThemeSection(settings.themeMode, onThemeModeChange)
-        }
-        item {
-            RuntimeSection(settings.monitoringEnabled, serviceUptimeMillis, onMonitoringChange)
         }
         item {
             ReminderSection(settings, onReminderChange)
@@ -1080,6 +1209,9 @@ private fun PermissionSection() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
     }
+    val usageStatsGranted = remember(refreshTick) {
+        PermissionIntents.hasUsageStatsAccess(context)
+    }
     val powerManager = context.getSystemService(PowerManager::class.java)
     val batteryGranted = remember(refreshTick) {
         powerManager.isIgnoringBatteryOptimizations(context.packageName)
@@ -1088,11 +1220,36 @@ private fun PermissionSection() {
         PermissionIntents.canScheduleExactAlarms(context)
     }
 
-    SectionCard(title = stringResource(R.string.settings_permissions), icon = Icons.Rounded.Info) {
+    SectionCard(
+        title = stringResource(R.string.settings_permissions),
+        icon = Icons.Rounded.Info,
+        action = {
+            IconButton(
+                onClick = { refreshTick += 1 },
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = stringResource(R.string.permission_refresh),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        },
+    ) {
         Text(
             text = stringResource(R.string.permission_usage_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PermissionRow(
+            title = stringResource(R.string.permission_usage_stats),
+            subtitle = stringResource(R.string.permission_usage_stats_desc),
+            granted = usageStatsGranted,
+            icon = Icons.Rounded.Info,
+            onClick = {
+                openIntent(context, PermissionIntents.usageAccessSettings())
+                refreshTick += 1
+            },
         )
         PermissionRow(
             title = stringResource(R.string.permission_notifications),
@@ -1220,43 +1377,6 @@ private fun ThemeSection(themeMode: String, onThemeModeChange: (String) -> Unit)
 }
 
 @Composable
-private fun RuntimeSection(
-    monitoringEnabled: Boolean,
-    serviceUptimeMillis: Long,
-    onMonitoringChange: (Boolean) -> Unit,
-) {
-    SectionCard(
-        title = stringResource(R.string.settings_runtime),
-        icon = if (monitoringEnabled) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringResource(R.string.service_switch),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = if (monitoringEnabled) {
-                        stringResource(R.string.service_uptime, formatDurationClock(serviceUptimeMillis))
-                    } else {
-                        stringResource(R.string.service_not_running)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(
-                checked = monitoringEnabled,
-                onCheckedChange = onMonitoringChange,
-            )
-        }
-    }
-}
-
-@Composable
 private fun ReminderSection(
     settings: com.example.neurotrack.AppSettings,
     onReminderChange: (Int, Int) -> Unit,
@@ -1363,6 +1483,7 @@ private fun AboutSection() {
 private fun SectionCard(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ElevatedCard(
@@ -1378,13 +1499,16 @@ private fun SectionCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(icon, contentDescription = null)
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
                 )
+                action?.invoke()
             }
             content()
         }
@@ -1453,17 +1577,12 @@ private fun formatDateTime(millis: Long): String {
         .format(formatter)
 }
 
+private fun formatMonthDay(date: LocalDate): String =
+    date.format(DateTimeFormatter.ofPattern("M/d", Locale.getDefault()))
+
 private fun formatClockTime(millis: Long): String {
     val time = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime()
     return "%02d:%02d".format(time.hour, time.minute)
-}
-
-private fun formatDurationClock(millis: Long): String {
-    val totalSeconds = (millis / 1000).coerceAtLeast(0)
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d:%02d".format(hours, minutes, seconds)
 }
 
 private fun nightMinute(millis: Long): Float {

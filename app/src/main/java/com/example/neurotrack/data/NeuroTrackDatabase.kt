@@ -148,9 +148,6 @@ class NeuroRepository(
     fun observeSleepRecords(sinceEpochDay: Long): Flow<List<SleepRecordEntity>> =
         database.sleepRecordDao().observeSince(sinceEpochDay)
 
-    fun observeRecentScreenEvents(limit: Int): Flow<List<ScreenEventEntity>> =
-        database.screenEventDao().observeRecent(limit)
-
     suspend fun submitAssessment(answers: List<Int>): AssessmentRecordEntity {
         val total = answers.sum()
         val record = AssessmentRecordEntity(
@@ -162,19 +159,6 @@ class NeuroRepository(
         log("INFO", "Assessment", "Submitted assessment total=$total answers=${record.answersCsv}")
         return record.copy(id = id)
     }
-
-    suspend fun recordScreenEvent(eventType: String, timestampMillis: Long = nowMillis()) {
-        database.screenEventDao().insert(
-            ScreenEventEntity(
-                timestampMillis = timestampMillis,
-                eventType = eventType,
-            ),
-        )
-        log("DEBUG", "ScreenEvent", "Recorded $eventType at $timestampMillis")
-    }
-
-    suspend fun getScreenEvents(startMillis: Long, endMillis: Long): List<ScreenEventEntity> =
-        database.screenEventDao().getBetween(startMillis, endMillis)
 
     suspend fun saveSleepRecord(record: SleepRecordEntity) {
         database.sleepRecordDao().insertOrReplace(record)

@@ -6,15 +6,12 @@ import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -32,14 +29,7 @@ import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.data.NeuroRepository
 import com.example.neurotrack.data.NeuroTrackDatabase
-import com.example.neurotrack.data.SCREEN_OFF
-import com.example.neurotrack.data.SCREEN_ON
 import com.example.neurotrack.domain.SleepAnalyzer
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import java.io.File
 import java.time.DayOfWeek
 import java.time.Duration
@@ -140,80 +130,6 @@ object NotificationHelper {
     }
 }
 
-object MonitoringServiceController {
-    fun setMonitoringEnabled(
-        context: Context,
-        settingsStore: SettingsStore,
-        enabled: Boolean,
-    ) {
-        settingsStore.setMonitoringEnabled(enabled)
-        val intent = Intent(context, ScreenMonitorService::class.java)
-        if (enabled) {
-            context.startService(intent)
-        } else {
-            context.stopService(intent)
-        }
-    }
-}
-
-class ScreenMonitorService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private lateinit var repository: NeuroRepository
-    private lateinit var settingsStore: SettingsStore
-
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            val type = when (intent.action) {
-                Intent.ACTION_SCREEN_ON -> SCREEN_ON
-                Intent.ACTION_SCREEN_OFF -> SCREEN_OFF
-                else -> return
-            }
-            scope.launch {
-                repository.recordScreenEvent(type)
-            }
-        }
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        val app = application as NeuroTrackApplication
-        repository = app.container.repository
-        settingsStore = app.container.settingsStore
-        settingsStore.setServiceStartedAtMillis(System.currentTimeMillis())
-        registerScreenReceiver()
-        scope.launch {
-            repository.log("INFO", "Service", "Screen monitor service started")
-        }
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
-
-    override fun onDestroy() {
-        runCatching { unregisterReceiver(receiver) }
-        scope.launch {
-            repository.log("INFO", "Service", "Screen monitor service stopped")
-        }
-        settingsStore.setServiceStartedAtMillis(0L)
-        scope.cancel()
-        super.onDestroy()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    private fun registerScreenReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_ON)
-            addAction(Intent.ACTION_SCREEN_OFF)
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(receiver, filter)
-        }
-    }
-}
-
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
@@ -290,7 +206,16 @@ class SleepAnalysisWorker(
         return runCatching {
             val targetDate = LocalDate.now()
             val window = SleepAnalyzer.windowFor(targetDate)
-            val events = repository.getScreenEvents(window.startMillis, window.endMillis)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                repository.log("WARN", "SleepWorker", "Screen usage events require Android 9 or newer")
+            } else if (!UsageScreenEventReader.hasUsageStatsAccess(applicationContext)) {
+                repository.log("WARN", "SleepWorker", "Usage stats access is not granted")
+            }
+            val events = UsageScreenEventReader.readScreenEvents(
+                context = applicationContext,
+                startMillis = window.startMillis,
+                endMillis = window.endMillis,
+            )
             val record = SleepAnalyzer.analyze(targetDate, events)
             repository.saveSleepRecord(record)
             repository.pruneLogs(TimeUnit.DAYS.toMillis(30))
@@ -390,6 +315,12 @@ object PermissionIntents {
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:${context.packageName}"))
         }
+
+    fun usageAccessSettings(): Intent =
+        Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+
+    fun hasUsageStatsAccess(context: Context): Boolean =
+        UsageScreenEventReader.hasUsageStatsAccess(context)
 
     fun canScheduleExactAlarms(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true

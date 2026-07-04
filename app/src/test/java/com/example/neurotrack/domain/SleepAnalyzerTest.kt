@@ -1,0 +1,113 @@
+package com.example.neurotrack.domain
+
+import com.example.neurotrack.data.SCREEN_OFF
+import com.example.neurotrack.data.SCREEN_ON
+import com.example.neurotrack.data.ScreenEventEntity
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+
+class SleepAnalyzerTest {
+    private val zoneId = ZoneId.of("Asia/Shanghai")
+    private val targetDate = LocalDate.of(2026, 7, 4)
+
+    @Test
+    fun windowFor_usesPreviousEveningToTargetNoon() {
+        val window = SleepAnalyzer.windowFor(targetDate, zoneId)
+
+        assertEquals(millis("2026-07-03", "20:00"), window.startMillis)
+        assertEquals(millis("2026-07-04", "12:00"), window.endMillis)
+    }
+
+    @Test
+    fun analyze_createsRecordFromLongestScreenOffInterval() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = listOf(
+                event("2026-07-03", "22:45", SCREEN_ON),
+                event("2026-07-03", "23:10", SCREEN_OFF),
+                event("2026-07-04", "07:20", SCREEN_ON),
+                event("2026-07-04", "09:00", SCREEN_OFF),
+                event("2026-07-04", "09:30", SCREEN_ON),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertFalse(record.isMissing)
+        assertEquals(targetDate.toEpochDay(), record.dateEpochDay)
+        assertEquals(millis("2026-07-03", "23:10"), record.sleepStartMillis)
+        assertEquals(millis("2026-07-04", "07:20"), record.sleepEndMillis)
+        assertEquals(490, record.durationMinutes)
+        assertEquals(0, record.wakeUpCount)
+    }
+
+    @Test
+    fun analyze_mergesShortAwakeGapsIntoOneSleepInterval() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = listOf(
+                event("2026-07-03", "23:00", SCREEN_OFF),
+                event("2026-07-04", "02:00", SCREEN_ON),
+                event("2026-07-04", "02:10", SCREEN_OFF),
+                event("2026-07-04", "07:00", SCREEN_ON),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertFalse(record.isMissing)
+        assertEquals(millis("2026-07-03", "23:00"), record.sleepStartMillis)
+        assertEquals(millis("2026-07-04", "07:00"), record.sleepEndMillis)
+        assertEquals(480, record.durationMinutes)
+        assertEquals(1, record.wakeUpCount)
+    }
+
+    @Test
+    fun analyze_marksMissingWhenLongestIntervalIsTooShort() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = listOf(
+                event("2026-07-04", "09:00", SCREEN_OFF),
+                event("2026-07-04", "10:30", SCREEN_ON),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertTrue(record.isMissing)
+        assertEquals(0, record.durationMinutes)
+        assertEquals(0, record.sleepStartMillis)
+        assertEquals(0, record.sleepEndMillis)
+    }
+
+    @Test
+    fun analyze_marksMissingWhenThereAreNoScreenEvents() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = emptyList(),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertTrue(record.isMissing)
+        assertEquals(targetDate.toEpochDay(), record.dateEpochDay)
+    }
+
+    private fun event(date: String, time: String, type: String): ScreenEventEntity =
+        ScreenEventEntity(
+            timestampMillis = millis(date, time),
+            eventType = type,
+        )
+
+    private fun millis(date: String, time: String): Long =
+        LocalDate.parse(date)
+            .atTime(LocalTime.parse(time))
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+}
