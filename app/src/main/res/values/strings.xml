@@ -60,6 +60,7 @@
     <string name="status_sleep_penalty">睡眠扣分</string>
     <string name="status_pressure_scale">压力等级 0–10</string>
     <string name="status_pressure_scale_hint">低 · 中 · 高</string>
+    <string name="status_pressure_month">近一个月压力变化</string>
     <string name="status_sleep_yesterday">昨日睡眠状态</string>
     <string name="status_sleep_duration">睡眠时长</string>
     <string name="status_bedtime">入睡时间</string>

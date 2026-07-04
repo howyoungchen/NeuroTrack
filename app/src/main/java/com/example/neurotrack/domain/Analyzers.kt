@@ -163,6 +163,11 @@ data class StressResult(
     val metrics: SleepPenaltyMetrics,
 )
 
+data class StressTrendPoint(
+    val date: LocalDate,
+    val score: Double?,
+)
+
 object StressCalculator {
     const val LATEST_WEIGHT = 0.5
     const val TREND_WEIGHT = 0.2
@@ -213,6 +218,36 @@ object StressCalculator {
             },
             metrics = metrics,
         )
+    }
+
+    fun trendPoints(
+        assessments: List<AssessmentRecordEntity>,
+        sleepRecords: List<SleepRecordEntity>,
+        endDate: LocalDate = LocalDate.now(),
+        days: Int = 30,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): List<StressTrendPoint> {
+        require(days > 0) { "days must be positive" }
+
+        val startDate = endDate.minusDays((days - 1).toLong())
+        return (0 until days).map { offset ->
+            val date = startDate.plusDays(offset.toLong())
+            val endMillis = date.plusDays(1)
+                .atStartOfDay(zoneId)
+                .toInstant()
+                .toEpochMilli() - 1
+            val endEpochDay = date.toEpochDay()
+
+            StressTrendPoint(
+                date = date,
+                score = calculate(
+                    assessments = assessments.filter { it.createdAtMillis <= endMillis },
+                    sleepRecords = sleepRecords.filter { it.dateEpochDay <= endEpochDay },
+                    nowMillis = endMillis,
+                    zoneId = zoneId,
+                ).score,
+            )
+        }
     }
 
     private fun normalizeAssessmentScore(totalScore: Int): Double =

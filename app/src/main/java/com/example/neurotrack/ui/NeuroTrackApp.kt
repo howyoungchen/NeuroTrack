@@ -88,6 +88,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -105,10 +106,13 @@ import com.example.neurotrack.BuildConfig
 import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.background.PermissionIntents
+import com.example.neurotrack.data.AssessmentRecordEntity
 import com.example.neurotrack.data.SleepRecordEntity
 import com.example.neurotrack.domain.SleepPenaltyMetrics
 import com.example.neurotrack.domain.StressBand
+import com.example.neurotrack.domain.StressCalculator
 import com.example.neurotrack.domain.StressResult
+import com.example.neurotrack.domain.StressTrendPoint
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -461,6 +465,13 @@ private fun StatusScreen(
         }
 
         item {
+            StressTrendCard(
+                assessments = uiState.assessments,
+                sleepRecords = uiState.sleepRecords,
+            )
+        }
+
+        item {
             YesterdaySleepStatusCard(records = uiState.sleepRecords)
         }
 
@@ -663,6 +674,188 @@ private fun StressGradientBar(score: Double?) {
             Text("10", style = MaterialTheme.typography.labelSmall)
         }
     }
+}
+
+@Composable
+private fun StressTrendCard(
+    assessments: List<AssessmentRecordEntity>,
+    sleepRecords: List<SleepRecordEntity>,
+) {
+    val today = LocalDate.now()
+    val points = remember(assessments, sleepRecords, today) {
+        StressCalculator.trendPoints(
+            assessments = assessments,
+            sleepRecords = sleepRecords,
+            endDate = today,
+            days = 30,
+        )
+    }
+    val latestScore = points.lastOrNull { it.score != null }?.score
+    val color = stressColor(stressBandForScore(latestScore))
+
+    ChartCard(title = stringResource(R.string.status_pressure_month), icon = Icons.Rounded.Favorite) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = latestScore?.let { stringResource(R.string.status_score_format, it) }
+                    ?: stringResource(R.string.status_missing),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = color,
+            )
+            Text(
+                text = stringResource(R.string.status_pressure_scale_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (points.none { it.score != null }) {
+            EmptyText(stringResource(R.string.chart_empty))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                StressTrendLineChart(points = points, lineColor = color)
+                SleepChartLabels(
+                    labels = listOf(
+                        formatMonthDay(points.first().date),
+                        formatMonthDay(points[points.size / 2].date),
+                        formatMonthDay(points.last().date),
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StressTrendLineChart(
+    points: List<StressTrendPoint>,
+    lineColor: Color,
+) {
+    val guide = MaterialTheme.colorScheme.outlineVariant
+    val track = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f)
+    val halo = MaterialTheme.colorScheme.surfaceContainerLow
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(142.dp),
+    ) {
+        if (points.isEmpty()) return@Canvas
+
+        val topPadding = 10.dp.toPx()
+        val bottomPadding = 12.dp.toPx()
+        val chartHeight = size.height - topPadding - bottomPadding
+        if (chartHeight <= 0f) return@Canvas
+
+        val bottom = topPadding + chartHeight
+        val chartPoints = points.mapIndexedNotNull { index, point ->
+            val score = point.score ?: return@mapIndexedNotNull null
+            val x = if (points.size == 1) {
+                size.width / 2f
+            } else {
+                index / (points.size - 1).toFloat() * size.width
+            }
+            val y = topPadding + (1f - (score.toFloat() / 10f).coerceIn(0f, 1f)) * chartHeight
+            Offset(x, y)
+        }
+        if (chartPoints.isEmpty()) return@Canvas
+
+        drawRoundRect(
+            color = track,
+            topLeft = Offset(0f, topPadding),
+            size = Size(size.width, chartHeight),
+            cornerRadius = CornerRadius(18.dp.toPx(), 18.dp.toPx()),
+        )
+
+        listOf(0f, 0.5f, 1f).forEach { fraction ->
+            val y = topPadding + fraction * chartHeight
+            drawLine(
+                color = guide,
+                start = Offset(0f, y),
+                end = Offset(size.width, y),
+                strokeWidth = 1.dp.toPx(),
+            )
+        }
+
+        if (chartPoints.size > 1) {
+            val linePath = smoothPath(chartPoints)
+            val areaPath = smoothPath(chartPoints).apply {
+                lineTo(chartPoints.last().x, bottom)
+                lineTo(chartPoints.first().x, bottom)
+                close()
+            }
+            drawPath(
+                path = areaPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        lineColor.copy(alpha = 0.24f),
+                        lineColor.copy(alpha = 0.03f),
+                    ),
+                    startY = topPadding,
+                    endY = bottom,
+                ),
+            )
+            drawPath(
+                path = linePath,
+                color = lineColor,
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+            )
+        }
+
+        chartPoints.forEach { point ->
+            drawCircle(
+                color = lineColor.copy(alpha = 0.36f),
+                radius = 2.dp.toPx(),
+                center = point,
+            )
+        }
+        drawCircle(
+            color = halo,
+            radius = 7.dp.toPx(),
+            center = chartPoints.last(),
+        )
+        drawCircle(
+            color = lineColor,
+            radius = 4.dp.toPx(),
+            center = chartPoints.last(),
+        )
+    }
+}
+
+private fun smoothPath(points: List<Offset>): Path {
+    val path = Path()
+    if (points.isEmpty()) return path
+
+    path.moveTo(points.first().x, points.first().y)
+    if (points.size == 1) return path
+
+    for (index in 0 until points.lastIndex) {
+        val p0 = points.getOrElse(index - 1) { points[index] }
+        val p1 = points[index]
+        val p2 = points[index + 1]
+        val p3 = points.getOrElse(index + 2) { p2 }
+        val control1 = Offset(
+            x = p1.x + (p2.x - p0.x) / 6f,
+            y = p1.y + (p2.y - p0.y) / 6f,
+        )
+        val control2 = Offset(
+            x = p2.x - (p3.x - p1.x) / 6f,
+            y = p2.y - (p3.y - p1.y) / 6f,
+        )
+
+        path.cubicTo(
+            control1.x,
+            control1.y,
+            control2.x,
+            control2.y,
+            p2.x,
+            p2.y,
+        )
+    }
+    return path
 }
 
 @Composable
@@ -1567,6 +1760,14 @@ private fun stressColor(band: StressBand?): Color =
         StressBand.MEDIUM -> Color(0xFF9A6B00)
         StressBand.HIGH -> Color(0xFFBA1A1A)
         null -> MaterialTheme.colorScheme.primary
+    }
+
+private fun stressBandForScore(score: Double?): StressBand? =
+    when {
+        score == null -> null
+        score < 4.0 -> StressBand.LOW
+        score < 7.0 -> StressBand.MEDIUM
+        else -> StressBand.HIGH
     }
 
 private fun formatDateTime(millis: Long): String {

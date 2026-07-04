@@ -60,6 +60,7 @@
     <string name="status_sleep_penalty">Sleep penalty</string>
     <string name="status_pressure_scale">Pressure level 0–10</string>
     <string name="status_pressure_scale_hint">Low · Medium · High</string>
+    <string name="status_pressure_month">Past month pressure</string>
     <string name="status_sleep_yesterday">Yesterday sleep status</string>
     <string name="status_sleep_duration">Duration</string>
     <string name="status_bedtime">Bedtime</string>
