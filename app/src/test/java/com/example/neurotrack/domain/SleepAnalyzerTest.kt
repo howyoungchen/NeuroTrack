@@ -1,8 +1,5 @@
 package com.example.neurotrack.domain
 
-import com.example.neurotrack.data.SCREEN_OFF
-import com.example.neurotrack.data.SCREEN_ON
-import com.example.neurotrack.data.ScreenEventEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,11 +42,11 @@ class SleepAnalyzerTest {
         val record = SleepAnalyzer.analyze(
             targetDate = targetDate,
             events = listOf(
-                event("2026-07-03", "22:45", SCREEN_ON),
-                event("2026-07-03", "23:10", SCREEN_OFF),
-                event("2026-07-04", "07:20", SCREEN_ON),
-                event("2026-07-04", "09:00", SCREEN_OFF),
-                event("2026-07-04", "09:30", SCREEN_ON),
+                event("2026-07-03", "22:45", ScreenEventType.SCREEN_ON),
+                event("2026-07-03", "23:10", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "07:20", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "09:00", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "09:30", ScreenEventType.SCREEN_ON),
             ),
             zoneId = zoneId,
             nowMillis = millis("2026-07-04", "12:05"),
@@ -68,10 +65,10 @@ class SleepAnalyzerTest {
         val record = SleepAnalyzer.analyze(
             targetDate = targetDate,
             events = listOf(
-                event("2026-07-03", "23:00", SCREEN_OFF),
-                event("2026-07-04", "02:00", SCREEN_ON),
-                event("2026-07-04", "02:10", SCREEN_OFF),
-                event("2026-07-04", "07:00", SCREEN_ON),
+                event("2026-07-03", "23:00", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "02:00", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "02:10", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "07:00", ScreenEventType.SCREEN_ON),
             ),
             zoneId = zoneId,
             nowMillis = millis("2026-07-04", "12:05"),
@@ -89,16 +86,16 @@ class SleepAnalyzerTest {
         val record = SleepAnalyzer.analyze(
             targetDate = targetDate,
             events = listOf(
-                event("2026-07-03", "23:00", SCREEN_OFF),
-                event("2026-07-04", "08:50", SCREEN_ON),
-                event("2026-07-04", "08:50:05", SCREEN_OFF),
-                event("2026-07-04", "08:53", SCREEN_ON),
-                event("2026-07-04", "08:53:10", SCREEN_OFF),
-                event("2026-07-04", "08:55", SCREEN_ON),
-                event("2026-07-04", "08:55:08", SCREEN_OFF),
-                event("2026-07-04", "09:00", SCREEN_ON),
-                event("2026-07-04", "09:00:10", SCREEN_OFF),
-                event("2026-07-04", "11:53", SCREEN_ON),
+                event("2026-07-03", "23:00", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "08:50", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "08:50:05", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "08:53", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "08:53:10", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "08:55", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "08:55:08", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "09:00", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "09:00:10", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "11:53", ScreenEventType.SCREEN_ON),
             ),
             zoneId = zoneId,
             nowMillis = millis("2026-07-04", "12:05"),
@@ -116,10 +113,10 @@ class SleepAnalyzerTest {
         val record = SleepAnalyzer.analyze(
             targetDate = targetDate,
             events = listOf(
-                event("2026-07-03", "23:00", SCREEN_OFF),
-                event("2026-07-04", "07:00", SCREEN_ON),
-                event("2026-07-04", "07:06", SCREEN_OFF),
-                event("2026-07-04", "09:00", SCREEN_ON),
+                event("2026-07-03", "23:00", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "07:00", ScreenEventType.SCREEN_ON),
+                event("2026-07-04", "07:06", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "09:00", ScreenEventType.SCREEN_ON),
             ),
             zoneId = zoneId,
             nowMillis = millis("2026-07-04", "12:05"),
@@ -138,8 +135,8 @@ class SleepAnalyzerTest {
             targetDate = targetDate,
             observations = SleepObservations(
                 screenEvents = listOf(
-                    event("2026-07-03", "23:00", SCREEN_OFF),
-                    event("2026-07-04", "10:00", SCREEN_ON),
+                    event("2026-07-03", "23:00", ScreenEventType.SCREEN_OFF),
+                    event("2026-07-04", "10:00", ScreenEventType.SCREEN_ON),
                 ),
                 locationSignals = listOf(
                     LocationSleepSignal(
@@ -165,8 +162,8 @@ class SleepAnalyzerTest {
         val record = SleepAnalyzer.analyze(
             targetDate = targetDate,
             events = listOf(
-                event("2026-07-04", "09:00", SCREEN_OFF),
-                event("2026-07-04", "10:30", SCREEN_ON),
+                event("2026-07-04", "09:00", ScreenEventType.SCREEN_OFF),
+                event("2026-07-04", "10:30", ScreenEventType.SCREEN_ON),
             ),
             zoneId = zoneId,
             nowMillis = millis("2026-07-04", "12:05"),
@@ -191,10 +188,10 @@ class SleepAnalyzerTest {
         assertEquals(targetDate.toEpochDay(), record.dateEpochDay)
     }
 
-    private fun event(date: String, time: String, type: String): ScreenEventEntity =
-        ScreenEventEntity(
+    private fun event(date: String, time: String, type: ScreenEventType): ScreenEvent =
+        ScreenEvent(
             timestampMillis = millis(date, time),
-            eventType = type,
+            type = type,
         )
 
     private fun millis(date: String, time: String): Long =

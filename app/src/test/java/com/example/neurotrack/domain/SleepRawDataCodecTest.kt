@@ -45,12 +45,7 @@ class SleepRawDataCodecTest {
             val expected = requireNotNull(export.expectedResult) {
                 "Fixture ${fixture.name} is missing expected_result"
             }
-            val actual = SleepAnalyzer.analyze(
-                targetDate = export.targetDate,
-                observations = export.observations,
-                zoneId = export.zoneId,
-                nowMillis = expected.createdAtMillis,
-            )
+            val actual = SleepRawDataReplay.replay(export)
 
             assertEquals("dateEpochDay in ${fixture.name}", expected.dateEpochDay, actual.dateEpochDay)
             assertEquals("sleepStartMillis in ${fixture.name}", expected.sleepStartMillis, actual.sleepStartMillis)

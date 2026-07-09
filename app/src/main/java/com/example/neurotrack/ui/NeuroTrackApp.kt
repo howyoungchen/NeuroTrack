@@ -50,7 +50,6 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -108,19 +107,9 @@ import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.background.LocationSleepSignalReader
 import com.example.neurotrack.background.PermissionIntents
-import com.example.neurotrack.data.AssessmentRecordEntity
-import com.example.neurotrack.data.SleepRecordEntity
-import com.example.neurotrack.domain.SleepAnalyzer
-import com.example.neurotrack.domain.SleepPenaltyMetrics
 import com.example.neurotrack.domain.StressBand
-import com.example.neurotrack.domain.StressCalculator
 import com.example.neurotrack.domain.StressResult
 import com.example.neurotrack.domain.StressTrendPoint
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -199,7 +188,7 @@ fun NeuroTrackRoot(
                     )
 
                     AppScreen.Status -> StatusScreen(
-                        uiState = uiState,
+                        status = uiState.status,
                         onStartAssessment = { selectedScreen = AppScreen.Assessment },
                     )
 
@@ -250,7 +239,7 @@ private fun LocalizedResources(languageTag: String, content: @Composable () -> U
 @Composable
 private fun AssessmentScreen(
     uiState: NeuroTrackUiState,
-    latestSubmission: com.example.neurotrack.data.AssessmentRecordEntity?,
+    latestSubmission: AssessmentSubmissionDisplay?,
     onSubmit: (List<Int>) -> Unit,
     onDismissResult: () -> Unit,
 ) {
@@ -341,7 +330,7 @@ private fun AssessmentScreen(
                 RecordRow(
                     title = stringResource(
                         R.string.assessment_history_item,
-                        formatDateTime(record.createdAtMillis),
+                        formatDisplayDateTime(record.createdAtMillis),
                         record.totalScore,
                     ),
                     subtitle = record.answersCsv,
@@ -448,10 +437,10 @@ private fun ResultDialog(totalScore: Int, onDismiss: () -> Unit) {
 
 @Composable
 private fun StatusScreen(
-    uiState: NeuroTrackUiState,
+    status: StatusDisplayModel,
     onStartAssessment: () -> Unit,
 ) {
-    val stress = uiState.stressResult
+    val stress = status.stress
     LazyColumn(
         contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -466,24 +455,21 @@ private fun StatusScreen(
         }
 
         item {
-            StressGradientBar(score = stress.score)
+            StressGradientBar(score = stress.score, band = stress.band)
         }
 
         item {
-            StressTrendCard(
-                assessments = uiState.assessments,
-                sleepRecords = uiState.sleepRecords,
-            )
+            StressTrendCard(trend = status.pressureTrend)
         }
 
         item {
-            YesterdaySleepStatusCard(records = uiState.sleepRecords)
+            YesterdaySleepStatusCard(summary = status.yesterdaySleep)
         }
 
         item {
             SleepStatusPeriodCard(
                 title = stringResource(R.string.status_sleep_week),
-                records = uiState.sleepRecords,
+                period = status.weekSleep,
                 days = 7,
             )
         }
@@ -491,13 +477,13 @@ private fun StatusScreen(
         item {
             SleepStatusPeriodCard(
                 title = stringResource(R.string.status_sleep_month),
-                records = uiState.sleepRecords,
+                period = status.monthSleep,
                 days = 30,
             )
         }
 
         item {
-            InsightsCard(stress.metrics)
+            InsightsCard(insights = status.insights)
         }
     }
 }
@@ -608,15 +594,9 @@ private fun StressGauge(score: Double, color: Color) {
 }
 
 @Composable
-private fun StressGradientBar(score: Double?) {
+private fun StressGradientBar(score: Double?, band: StressBand?) {
     ChartCard(title = stringResource(R.string.status_pressure_scale)) {
-        val markerColor = score?.let {
-            when {
-                it < 4.0 -> stressColor(StressBand.LOW)
-                it < 7.0 -> stressColor(StressBand.MEDIUM)
-                else -> stressColor(StressBand.HIGH)
-            }
-        } ?: MaterialTheme.colorScheme.outline
+        val markerColor = score?.let { stressColor(band) } ?: MaterialTheme.colorScheme.outline
         val scoreText = score?.let { stringResource(R.string.status_score_format, it) }
             ?: stringResource(R.string.status_missing)
 
@@ -682,21 +662,10 @@ private fun StressGradientBar(score: Double?) {
 }
 
 @Composable
-private fun StressTrendCard(
-    assessments: List<AssessmentRecordEntity>,
-    sleepRecords: List<SleepRecordEntity>,
-) {
-    val today = LocalDate.now()
-    val points = remember(assessments, sleepRecords, today) {
-        StressCalculator.trendPoints(
-            assessments = assessments,
-            sleepRecords = sleepRecords,
-            endDate = today,
-            days = 30,
-        )
-    }
-    val latestScore = points.lastOrNull { it.score != null }?.score
-    val color = stressColor(stressBandForScore(latestScore))
+private fun StressTrendCard(trend: PressureTrendDisplay) {
+    val points = trend.points
+    val latestScore = trend.latestScore
+    val color = stressColor(trend.latestBand)
 
     ChartCard(title = stringResource(R.string.status_pressure_month), icon = Icons.Rounded.Favorite) {
         Row(
@@ -723,13 +692,7 @@ private fun StressTrendCard(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 StressTrendLineChart(points = points, lineColor = color)
-                SleepChartLabels(
-                    labels = listOf(
-                        formatMonthDay(points.first().date),
-                        formatMonthDay(points[points.size / 2].date),
-                        formatMonthDay(points.last().date),
-                    ),
-                )
+                SleepChartLabels(labels = trend.chartLabels)
             }
         }
     }
@@ -864,80 +827,41 @@ private fun smoothPath(points: List<Offset>): Path {
 }
 
 @Composable
-private fun YesterdaySleepStatusCard(records: List<SleepRecordEntity>) {
-    val today = LocalDate.now().toEpochDay()
-    val record = remember(records, today) {
-        latestSleepRecordForDisplay(records, today)
-    }
-
+private fun YesterdaySleepStatusCard(summary: SleepSummaryDisplay) {
     ChartCard(title = stringResource(R.string.status_sleep_yesterday), icon = Icons.Rounded.Schedule) {
         SleepMetricRow(
-            duration = record?.let { stringResource(R.string.status_hours_format, it.durationMinutes / 60.0) }
+            duration = summary.durationHours?.let { stringResource(R.string.status_hours_format, it) }
                 ?: stringResource(R.string.status_missing),
-            bedtime = record?.let { formatClockTime(it.sleepStartMillis) }
-                ?: stringResource(R.string.status_missing),
-            wakeTime = record?.let { formatClockTime(it.sleepEndMillis) }
-                ?: stringResource(R.string.status_missing),
+            bedtime = summary.bedtimeText ?: stringResource(R.string.status_missing),
+            wakeTime = summary.wakeTimeText ?: stringResource(R.string.status_missing),
         )
-        if (record == null) {
+        if (!summary.hasData) {
             EmptyText(stringResource(R.string.chart_empty))
         }
     }
 }
-
-internal fun latestSleepRecordForDisplay(
-    records: List<SleepRecordEntity>,
-    todayEpochDay: Long = LocalDate.now().toEpochDay(),
-): SleepRecordEntity? =
-    records
-        .asSequence()
-        .filter { !it.isMissing && it.durationMinutes > 0 && it.dateEpochDay <= todayEpochDay }
-        .maxByOrNull { it.dateEpochDay }
 
 @Composable
 private fun SleepStatusPeriodCard(
     title: String,
-    records: List<SleepRecordEntity>,
+    period: SleepPeriodDisplay,
     days: Int,
 ) {
-    val today = LocalDate.now()
-    val data = remember(records, days, today) {
-        sleepRecordsForPeriod(records, today, days)
-    }
-
     ChartCard(title, icon = Icons.Rounded.Schedule) {
         SleepMetricRow(
-            duration = if (data.isEmpty()) {
-                stringResource(R.string.status_missing)
-            } else {
-                stringResource(R.string.status_hours_format, data.map { it.durationMinutes }.average() / 60.0)
-            },
-            bedtime = averageClockText(data.map { nightMinute(it.sleepStartMillis) })
+            duration = period.durationHours?.let { stringResource(R.string.status_hours_format, it) }
                 ?: stringResource(R.string.status_missing),
-            wakeTime = averageClockText(data.map { minuteOfDay(it.sleepEndMillis).toFloat() })
-                ?: stringResource(R.string.status_missing),
+            bedtime = period.bedtimeText ?: stringResource(R.string.status_missing),
+            wakeTime = period.wakeTimeText ?: stringResource(R.string.status_missing),
         )
-        if (data.isEmpty()) {
+        if (!period.hasData) {
             EmptyText(stringResource(R.string.chart_empty))
         } else if (days <= 7) {
-            SleepDailyDurationBars(records = data, today = today)
+            SleepDailyDurationBars(period = period)
         } else {
-            SleepMonthlyAverageBars(records = data, today = today)
+            SleepMonthlyAverageBars(period = period)
         }
     }
-}
-
-internal fun sleepRecordsForPeriod(
-    records: List<SleepRecordEntity>,
-    today: LocalDate = LocalDate.now(),
-    days: Int,
-): List<SleepRecordEntity> {
-    val endEpochDay = today.toEpochDay()
-    val startEpochDay = today.minusDays((days - 1).toLong()).toEpochDay()
-    return records
-        .filter { !it.isMissing && it.durationMinutes > 0 }
-        .filter { it.dateEpochDay in startEpochDay..endEpochDay }
-        .sortedBy { it.dateEpochDay }
 }
 
 @Composable
@@ -995,45 +919,30 @@ private fun SleepMetricColumn(
     }
 }
 
-private data class SleepDurationPoint(
-    val date: LocalDate,
-    val durationMinutes: Float?,
-)
-
 @Composable
-private fun SleepDailyDurationBars(
-    records: List<SleepRecordEntity>,
-    today: LocalDate,
-) {
+private fun SleepDailyDurationBars(period: SleepPeriodDisplay) {
     val weekdays = stringArrayResource(R.array.weekdays).toList()
-    val points = remember(records, today) {
-        dailySleepDurationPoints(records = records, today = today, days = 7)
-    }
-
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SleepDurationBars(points = points)
+        SleepDurationBars(points = period.points)
         SleepChartLabels(
-            labels = points.map { point ->
-                weekdays[point.date.dayOfWeek.value - 1]
-            },
+            labels = period.chartLabels.map { it.text(weekdays) },
         )
     }
 }
 
 @Composable
-private fun SleepMonthlyAverageBars(
-    records: List<SleepRecordEntity>,
-    today: LocalDate,
-) {
-    val points = remember(records, today) {
-        monthlySleepAveragePoints(records = records, today = today)
-    }
-
+private fun SleepMonthlyAverageBars(period: SleepPeriodDisplay) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SleepDurationBars(points = points)
-        SleepChartLabels(labels = points.map { formatMonthDay(it.date) })
+        SleepDurationBars(points = period.points)
+        SleepChartLabels(labels = period.chartLabels.map { it.text(emptyList()) })
     }
 }
+
+private fun SleepChartLabel.text(weekdays: List<String>): String =
+    when (this) {
+        is SleepChartLabel.Weekday -> weekdays[dayOfWeekValue.coerceIn(1, 7) - 1]
+        is SleepChartLabel.Text -> value
+    }
 
 @Composable
 private fun SleepDurationBars(points: List<SleepDurationPoint>) {
@@ -1109,242 +1018,14 @@ private fun SleepChartLabels(labels: List<String>) {
     }
 }
 
-private fun dailySleepDurationPoints(
-    records: List<SleepRecordEntity>,
-    today: LocalDate,
-    days: Int,
-): List<SleepDurationPoint> {
-    val startDate = today.minusDays((days - 1).toLong())
-    val recordsByDay = records.associateBy { it.dateEpochDay }
-    return (0 until days).map { offset ->
-        val date = startDate.plusDays(offset.toLong())
-        SleepDurationPoint(
-            date = date,
-            durationMinutes = recordsByDay[date.toEpochDay()]?.durationMinutes?.toFloat(),
-        )
-    }
-}
-
-private fun monthlySleepAveragePoints(
-    records: List<SleepRecordEntity>,
-    today: LocalDate,
-): List<SleepDurationPoint> {
-    val startDate = today.minusDays(29)
-    return (0 until 5).map { bucketIndex ->
-        val bucketStart = startDate.plusDays((bucketIndex * 7).toLong())
-        val bucketEnd = bucketStart.plusDays(6).let { end ->
-            if (end.isAfter(today)) today else end
-        }
-        val startEpochDay = bucketStart.toEpochDay()
-        val endEpochDay = bucketEnd.toEpochDay()
-        val durations = records
-            .filter { it.dateEpochDay in startEpochDay..endEpochDay }
-            .map { it.durationMinutes }
-        SleepDurationPoint(
-            date = bucketStart,
-            durationMinutes = durations.takeIf { it.isNotEmpty() }?.average()?.toFloat(),
-        )
-    }
-}
-
 @Composable
-private fun MetricGrid(stress: StressResult) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        MetricCard(
-            label = stringResource(R.string.status_latest_assessment),
-            value = stress.latestAssessmentScore?.let { stringResource(R.string.status_score_format, it) }
-                ?: stringResource(R.string.status_missing),
-            modifier = Modifier.weight(1f),
-        )
-        MetricCard(
-            label = stringResource(R.string.status_trend_assessment),
-            value = stress.trendAssessmentScore?.let { stringResource(R.string.status_score_format, it) }
-                ?: stringResource(R.string.status_missing),
-            modifier = Modifier.weight(1f),
-        )
-        MetricCard(
-            label = stringResource(R.string.status_sleep_penalty),
-            value = stress.sleepPenaltyScore?.let { stringResource(R.string.status_score_format, it) }
-                ?: stringResource(R.string.status_missing),
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun MetricCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        ),
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(12.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DurationBarChart(title: String, records: List<SleepRecordEntity>, days: Int) {
-    ChartCard(title, icon = Icons.Rounded.Schedule) {
-        val data = records
-            .filter { !it.isMissing }
-            .sortedBy { it.dateEpochDay }
-            .takeLast(days)
-        if (data.isEmpty()) {
-            EmptyText(stringResource(R.string.chart_empty))
-        } else {
-            val color = MaterialTheme.colorScheme.primary
-            val track = MaterialTheme.colorScheme.surfaceVariant
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-            ) {
-                val maxMinutes = maxOf(480f, data.maxOf { it.durationMinutes }.toFloat())
-                val slotWidth = size.width / data.size
-                data.forEachIndexed { index, record ->
-                    val height = (record.durationMinutes / maxMinutes) * size.height
-                    val barWidth = slotWidth * 0.46f
-                    val left = index * slotWidth + (slotWidth - barWidth) / 2
-                    drawRoundRect(
-                        color = track,
-                        topLeft = Offset(left, 0f),
-                        size = Size(barWidth, size.height),
-                        cornerRadius = CornerRadius(12f, 12f),
-                    )
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(left, size.height - height),
-                        size = Size(barWidth, height),
-                        cornerRadius = CornerRadius(12f, 12f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeeklyAverageChart(title: String, records: List<SleepRecordEntity>) {
-    ChartCard(title, icon = Icons.Rounded.Schedule) {
-        val today = LocalDate.now().toEpochDay()
-        val values = (0..3).map { week ->
-            val rangeStart = week * 7
-            val rangeEnd = rangeStart + 6
-            records
-                .filter { !it.isMissing }
-                .filter { (today - it.dateEpochDay).toInt() in rangeStart..rangeEnd }
-                .map { it.durationMinutes }
-                .let { if (it.isEmpty()) 0f else it.average().toFloat() }
-        }.asReversed()
-
-        if (values.all { it == 0f }) {
-            EmptyText(stringResource(R.string.chart_empty))
-        } else {
-            val color = MaterialTheme.colorScheme.tertiary
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(130.dp),
-            ) {
-                val maxMinutes = maxOf(480f, values.maxOrNull() ?: 0f)
-                val slotWidth = size.width / values.size
-                values.forEachIndexed { index, minutes ->
-                    val height = (minutes / maxMinutes) * size.height
-                    val barWidth = slotWidth * 0.48f
-                    val left = index * slotWidth + (slotWidth - barWidth) / 2
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(left, size.height - height),
-                        size = Size(barWidth, height),
-                        cornerRadius = CornerRadius(12f, 12f),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SleepWindowChart(title: String, records: List<SleepRecordEntity>) {
-    ChartCard(title, icon = Icons.Rounded.Schedule) {
-        val data = records
-            .filter { !it.isMissing }
-            .sortedBy { it.dateEpochDay }
-            .takeLast(7)
-        if (data.isEmpty()) {
-            EmptyText(stringResource(R.string.chart_empty))
-        } else {
-            val sleepColor = MaterialTheme.colorScheme.primary
-            val wakeColor = MaterialTheme.colorScheme.secondary
-            val guide = MaterialTheme.colorScheme.surfaceVariant
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(170.dp),
-            ) {
-                val rows = data.size
-                val rowHeight = size.height / rows
-                val startBound = 20 * 60f
-                val endBound = 36 * 60f
-                data.forEachIndexed { index, record ->
-                    val y = rowHeight * index + rowHeight / 2
-                    val start = nightMinute(record.sleepStartMillis)
-                    val end = nightMinute(record.sleepEndMillis)
-                    val x1 = ((start - startBound) / (endBound - startBound)).coerceIn(0f, 1f) * size.width
-                    val x2 = ((end - startBound) / (endBound - startBound)).coerceIn(0f, 1f) * size.width
-                    drawLine(guide, Offset(0f, y), Offset(size.width, y), strokeWidth = 2f)
-                    drawLine(
-                        sleepColor,
-                        Offset(x1, y),
-                        Offset(x2.coerceAtLeast(x1 + 2f), y),
-                        strokeWidth = 8f,
-                        cap = StrokeCap.Round,
-                    )
-                    drawCircle(sleepColor, radius = 7f, center = Offset(x1, y))
-                    drawCircle(wakeColor, radius = 7f, center = Offset(x2, y))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InsightsCard(metrics: SleepPenaltyMetrics) {
+private fun InsightsCard(insights: List<StatusInsight>) {
     ChartCard(title = stringResource(R.string.status_insights), icon = Icons.Rounded.CheckCircle) {
-        val insights = remember(metrics) {
-            when {
-                !metrics.hasSleepData -> listOf(R.string.status_insight_no_sleep)
-                else -> buildList {
-                    if (metrics.bedtimeGettingLater) add(R.string.status_insight_later)
-                    if (metrics.irregularBedtime) add(R.string.status_insight_irregular)
-                    if (metrics.shortSleep) add(R.string.status_insight_short)
-                    if (metrics.suddenDurationDrop) add(R.string.status_insight_drop)
-                    if (metrics.lateAverageBedtime) add(R.string.status_insight_late_average)
-                    if (isEmpty()) add(R.string.status_insight_stable)
-                }
-            }
-        }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            insights.forEach { resId ->
+            insights.forEach { insight ->
                 AssistChip(
                     onClick = {},
-                    label = { Text(stringResource(resId)) },
+                    label = { Text(stringResource(insight.stringRes)) },
                     leadingIcon = {
                         Icon(
                             Icons.Rounded.CheckCircle,
@@ -1674,21 +1355,16 @@ private fun DropdownSelector(
     }
 }
 
-private data class SleepRawExportRange(
-    val startMillis: Long,
-    val endMillis: Long,
-)
-
 @Composable
 private fun ExportsSection(
     onExportLogs: () -> Unit,
     onExportSleepRawData: (Long, Long) -> Unit,
 ) {
-    val defaultRange = remember { defaultSleepRawExportRange() }
-    var startText by rememberSaveable { mutableStateOf(formatDateTime(defaultRange.startMillis)) }
-    var endText by rememberSaveable { mutableStateOf(formatDateTime(defaultRange.endMillis)) }
-    val startMillis = remember(startText) { parseExportDateTime(startText) }
-    val endMillis = remember(endText) { parseExportDateTime(endText) }
+    val defaultRange = remember { SleepRawExportRangeModel.defaultRange() }
+    var startText by rememberSaveable { mutableStateOf(SleepRawExportRangeModel.format(defaultRange.startMillis)) }
+    var endText by rememberSaveable { mutableStateOf(SleepRawExportRangeModel.format(defaultRange.endMillis)) }
+    val startMillis = remember(startText) { SleepRawExportRangeModel.parse(startText) }
+    val endMillis = remember(endText) { SleepRawExportRangeModel.parse(endText) }
     val canExportSleepRawData = startMillis != null && endMillis != null && endMillis > startMillis
 
     SectionCard(title = stringResource(R.string.settings_exports), icon = Icons.Rounded.Download) {
@@ -1738,6 +1414,17 @@ private fun ExportsSection(
         }
     }
 }
+
+private val StatusInsight.stringRes: Int
+    get() = when (this) {
+        StatusInsight.NO_SLEEP -> R.string.status_insight_no_sleep
+        StatusInsight.LATER -> R.string.status_insight_later
+        StatusInsight.IRREGULAR -> R.string.status_insight_irregular
+        StatusInsight.SHORT -> R.string.status_insight_short
+        StatusInsight.DROP -> R.string.status_insight_drop
+        StatusInsight.LATE_AVERAGE -> R.string.status_insight_late_average
+        StatusInsight.STABLE -> R.string.status_insight_stable
+    }
 
 @Composable
 private fun AboutSection() {
@@ -1848,65 +1535,6 @@ private fun stressColor(band: StressBand?): Color =
         StressBand.HIGH -> Color(0xFFBA1A1A)
         null -> MaterialTheme.colorScheme.primary
     }
-
-private fun stressBandForScore(score: Double?): StressBand? =
-    when {
-        score == null -> null
-        score < 4.0 -> StressBand.LOW
-        score < 7.0 -> StressBand.MEDIUM
-        else -> StressBand.HIGH
-    }
-
-private fun formatDateTime(millis: Long): String {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-    return Instant.ofEpochMilli(millis)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDateTime()
-        .format(formatter)
-}
-
-private fun defaultSleepRawExportRange(): SleepRawExportRange {
-    val window = SleepAnalyzer.windowFor(SleepAnalyzer.targetDateForAnalysis())
-    return SleepRawExportRange(
-        startMillis = window.startMillis,
-        endMillis = window.endMillis,
-    )
-}
-
-private fun parseExportDateTime(text: String): Long? =
-    runCatching {
-        LocalDateTime
-            .parse(text.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-            .atZone(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-    }.getOrNull()
-
-private fun formatMonthDay(date: LocalDate): String =
-    date.format(DateTimeFormatter.ofPattern("M/d", Locale.getDefault()))
-
-private fun formatClockTime(millis: Long): String {
-    val time = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime()
-    return "%02d:%02d".format(time.hour, time.minute)
-}
-
-private fun nightMinute(millis: Long): Float {
-    val time = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime()
-    val minute = time.hour * 60 + time.minute
-    return if (minute < 20 * 60) (minute + 24 * 60).toFloat() else minute.toFloat()
-}
-
-private fun minuteOfDay(millis: Long): Int {
-    val time = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime()
-    return time.hour * 60 + time.minute
-}
-
-private fun averageClockText(minutes: List<Float>): String? {
-    if (minutes.isEmpty()) return null
-    val average = minutes.average().roundToInt()
-    val normalized = ((average % (24 * 60)) + (24 * 60)) % (24 * 60)
-    return "%02d:%02d".format(normalized / 60, normalized % 60)
-}
 
 private fun openIntent(context: Context, intent: Intent) {
     runCatching {

@@ -6,12 +6,23 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
 import android.os.Process
-import com.example.neurotrack.data.SCREEN_OFF
-import com.example.neurotrack.data.SCREEN_ON
-import com.example.neurotrack.data.ScreenEventEntity
 import com.example.neurotrack.domain.DeviceInteractionEvent
 import com.example.neurotrack.domain.DeviceInteractionType
+import com.example.neurotrack.domain.ScreenEvent
+import com.example.neurotrack.domain.ScreenEventType
 import com.example.neurotrack.domain.SleepObservations
+
+enum class UsageObservationStatus {
+    AVAILABLE,
+    UNSUPPORTED_SDK,
+    MISSING_USAGE_ACCESS,
+    USAGE_STATS_UNAVAILABLE,
+}
+
+data class UsageObservationRead(
+    val observations: SleepObservations,
+    val status: UsageObservationStatus,
+)
 
 object UsageScreenEventReader {
     @Suppress("DEPRECATION")
@@ -37,30 +48,41 @@ object UsageScreenEventReader {
         context: Context,
         startMillis: Long,
         endMillis: Long,
-    ): List<ScreenEventEntity> =
+    ): List<ScreenEvent> =
         readSleepObservations(context, startMillis, endMillis).screenEvents
 
     fun readSleepObservations(
         context: Context,
         startMillis: Long,
         endMillis: Long,
-    ): SleepObservations {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return emptyObservations()
-        if (!hasUsageStatsAccess(context)) return emptyObservations()
+    ): SleepObservations =
+        readSleepObservationResult(context, startMillis, endMillis).observations
+
+    fun readSleepObservationResult(
+        context: Context,
+        startMillis: Long,
+        endMillis: Long,
+    ): UsageObservationRead {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return UsageObservationRead(emptyObservations(), UsageObservationStatus.UNSUPPORTED_SDK)
+        }
+        if (!hasUsageStatsAccess(context)) {
+            return UsageObservationRead(emptyObservations(), UsageObservationStatus.MISSING_USAGE_ACCESS)
+        }
 
         val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)
-            ?: return emptyObservations()
+            ?: return UsageObservationRead(emptyObservations(), UsageObservationStatus.USAGE_STATS_UNAVAILABLE)
         val usageEvents = usageStatsManager.queryEvents(startMillis, endMillis)
         val event = UsageEvents.Event()
-        val screenEvents = mutableListOf<ScreenEventEntity>()
+        val screenEvents = mutableListOf<ScreenEvent>()
         val interactionEvents = mutableListOf<DeviceInteractionEvent>()
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
             screenEventTypeForUsageEventType(event.eventType)?.let { type ->
-                screenEvents += ScreenEventEntity(
+                screenEvents += ScreenEvent(
                     timestampMillis = event.timeStamp,
-                    eventType = type,
+                    type = type,
                 )
             }
             interactionTypeForUsageEventType(event.eventType)?.let { type ->
@@ -71,16 +93,19 @@ object UsageScreenEventReader {
             }
         }
 
-        return SleepObservations(
-            screenEvents = screenEvents.sortedBy { it.timestampMillis },
-            interactionEvents = interactionEvents.sortedBy { it.timestampMillis },
+        return UsageObservationRead(
+            observations = SleepObservations(
+                screenEvents = screenEvents.sortedBy { it.timestampMillis },
+                interactionEvents = interactionEvents.sortedBy { it.timestampMillis },
+            ),
+            status = UsageObservationStatus.AVAILABLE,
         )
     }
 
-    internal fun screenEventTypeForUsageEventType(eventType: Int): String? =
+    internal fun screenEventTypeForUsageEventType(eventType: Int): ScreenEventType? =
         when (eventType) {
-            UsageEvents.Event.SCREEN_INTERACTIVE -> SCREEN_ON
-            UsageEvents.Event.SCREEN_NON_INTERACTIVE -> SCREEN_OFF
+            UsageEvents.Event.SCREEN_INTERACTIVE -> ScreenEventType.SCREEN_ON
+            UsageEvents.Event.SCREEN_NON_INTERACTIVE -> ScreenEventType.SCREEN_OFF
             else -> null
         }
 

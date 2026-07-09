@@ -29,7 +29,6 @@ import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.data.NeuroRepository
 import com.example.neurotrack.data.NeuroTrackDatabase
-import com.example.neurotrack.domain.SleepAnalyzer
 import java.io.File
 import java.time.DayOfWeek
 import java.time.Duration
@@ -203,34 +202,30 @@ class SleepAnalysisWorker(
     override suspend fun doWork(): Result {
         val repository = repository(applicationContext)
         return runCatching {
-            val targetDate = SleepAnalyzer.targetDateForAnalysis()
-            val window = SleepAnalyzer.windowFor(targetDate)
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                repository.log("WARN", "SleepWorker", "Screen usage events require Android 9 or newer")
-            } else if (!UsageScreenEventReader.hasUsageStatsAccess(applicationContext)) {
-                repository.log("WARN", "SleepWorker", "Usage stats access is not granted")
-            }
-            val usageObservations = UsageScreenEventReader.readSleepObservations(
-                context = applicationContext,
-                startMillis = window.startMillis,
-                endMillis = window.endMillis,
-            )
-            val locationSignals = LocationSleepSignalReader.readSignals(
-                context = applicationContext,
-                startMillis = window.startMillis,
-                endMillis = window.endMillis,
-            )
-            val record = SleepAnalyzer.analyze(
-                targetDate = targetDate,
-                observations = usageObservations.copy(locationSignals = locationSignals),
-            )
-            repository.saveSleepRecord(record)
+            val analysis = SleepAnalysisRunner.android(applicationContext).runForTargetDate()
+            logUsageObservationStatus(repository, analysis.usageStatus)
+            repository.saveSleepRecord(analysis.record)
             repository.pruneLogs(TimeUnit.DAYS.toMillis(30))
             Result.success()
         }.getOrElse { throwable ->
             repository.log("ERROR", "SleepWorker", "Sleep analysis failed", throwable)
             Result.retry()
         }
+    }
+}
+
+private suspend fun logUsageObservationStatus(
+    repository: NeuroRepository,
+    status: UsageObservationStatus,
+) {
+    when (status) {
+        UsageObservationStatus.AVAILABLE -> Unit
+        UsageObservationStatus.UNSUPPORTED_SDK ->
+            repository.log("WARN", "SleepWorker", "Screen usage events require Android 9 or newer")
+        UsageObservationStatus.MISSING_USAGE_ACCESS ->
+            repository.log("WARN", "SleepWorker", "Usage stats access is not granted")
+        UsageObservationStatus.USAGE_STATS_UNAVAILABLE ->
+            repository.log("WARN", "SleepWorker", "Usage stats manager is unavailable")
     }
 }
 

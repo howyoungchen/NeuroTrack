@@ -11,10 +11,10 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.neurotrack.domain.SleepRecord
 import kotlinx.coroutines.flow.Flow
-
-const val SCREEN_ON = "SCREEN_ON"
-const val SCREEN_OFF = "SCREEN_OFF"
 
 @Entity(tableName = "assessment_records")
 data class AssessmentRecordEntity(
@@ -22,13 +22,6 @@ data class AssessmentRecordEntity(
     val createdAtMillis: Long,
     val answersCsv: String,
     val totalScore: Int,
-)
-
-@Entity(tableName = "screen_events")
-data class ScreenEventEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val timestampMillis: Long,
-    val eventType: String,
 )
 
 @Entity(
@@ -72,18 +65,6 @@ interface AssessmentDao {
 }
 
 @Dao
-interface ScreenEventDao {
-    @Insert
-    suspend fun insert(event: ScreenEventEntity): Long
-
-    @Query("SELECT * FROM screen_events WHERE timestampMillis BETWEEN :startMillis AND :endMillis ORDER BY timestampMillis ASC")
-    suspend fun getBetween(startMillis: Long, endMillis: Long): List<ScreenEventEntity>
-
-    @Query("SELECT * FROM screen_events ORDER BY timestampMillis DESC LIMIT :limit")
-    fun observeRecent(limit: Int): Flow<List<ScreenEventEntity>>
-}
-
-@Dao
 interface SleepRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrReplace(record: SleepRecordEntity): Long
@@ -110,21 +91,24 @@ interface LogDao {
 @Database(
     entities = [
         AssessmentRecordEntity::class,
-        ScreenEventEntity::class,
         SleepRecordEntity::class,
         AppLogEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 abstract class NeuroTrackDatabase : RoomDatabase() {
     abstract fun assessmentDao(): AssessmentDao
-    abstract fun screenEventDao(): ScreenEventDao
     abstract fun sleepRecordDao(): SleepRecordDao
     abstract fun logDao(): LogDao
 
     companion object {
         @Volatile private var instance: NeuroTrackDatabase? = null
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS screen_events")
+            }
+        }
 
         fun getInstance(context: Context): NeuroTrackDatabase {
             return instance ?: synchronized(this) {
@@ -132,7 +116,10 @@ abstract class NeuroTrackDatabase : RoomDatabase() {
                     context.applicationContext,
                     NeuroTrackDatabase::class.java,
                     "neurotrack.db",
-                ).build().also { instance = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build()
+                    .also { instance = it }
             }
         }
     }
@@ -160,8 +147,8 @@ class NeuroRepository(
         return record.copy(id = id)
     }
 
-    suspend fun saveSleepRecord(record: SleepRecordEntity) {
-        database.sleepRecordDao().insertOrReplace(record)
+    suspend fun saveSleepRecord(record: SleepRecord) {
+        database.sleepRecordDao().insertOrReplace(record.toEntity())
         log(
             "INFO",
             "Sleep",

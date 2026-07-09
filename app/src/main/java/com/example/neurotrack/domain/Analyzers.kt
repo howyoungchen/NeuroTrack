@@ -1,10 +1,5 @@
 package com.example.neurotrack.domain
 
-import com.example.neurotrack.data.AssessmentRecordEntity
-import com.example.neurotrack.data.SCREEN_OFF
-import com.example.neurotrack.data.SCREEN_ON
-import com.example.neurotrack.data.ScreenEventEntity
-import com.example.neurotrack.data.SleepRecordEntity
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -59,7 +54,7 @@ data class LocationSleepSignal(
 )
 
 data class SleepObservations(
-    val screenEvents: List<ScreenEventEntity>,
+    val screenEvents: List<ScreenEvent>,
     val interactionEvents: List<DeviceInteractionEvent> = emptyList(),
     val locationSignals: List<LocationSleepSignal> = emptyList(),
 )
@@ -90,10 +85,10 @@ object SleepAnalyzer {
 
     fun analyze(
         targetDate: LocalDate,
-        events: List<ScreenEventEntity>,
+        events: List<ScreenEvent>,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
-    ): SleepRecordEntity =
+    ): SleepRecord =
         analyze(
             targetDate = targetDate,
             observations = SleepObservations(screenEvents = events),
@@ -106,7 +101,7 @@ object SleepAnalyzer {
         observations: SleepObservations,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
-    ): SleepRecordEntity {
+    ): SleepRecord {
         val window = windowFor(targetDate, zoneId)
         val sortedScreenEvents = observations.screenEvents
             .filter { it.timestampMillis in window.startMillis..window.endMillis }
@@ -143,7 +138,7 @@ object SleepAnalyzer {
         return if (selected == null || durationMinutes < SleepRules.MIN_SLEEP_MINUTES) {
             missingRecord(targetDate, nowMillis)
         } else {
-            SleepRecordEntity(
+            SleepRecord(
                 dateEpochDay = targetDate.toEpochDay(),
                 sleepStartMillis = selected.startMillis,
                 sleepEndMillis = selected.endMillis,
@@ -156,21 +151,21 @@ object SleepAnalyzer {
     }
 
     private fun completeOffIntervals(
-        events: List<ScreenEventEntity>,
+        events: List<ScreenEvent>,
         window: SleepWindow,
     ): List<SleepInterval> {
         if (events.isEmpty()) return emptyList()
 
         val offIntervals = mutableListOf<SleepInterval>()
-        if (events.first().eventType == SCREEN_ON && events.first().timestampMillis > window.startMillis) {
+        if (events.first().type == ScreenEventType.SCREEN_ON && events.first().timestampMillis > window.startMillis) {
             offIntervals += SleepInterval(window.startMillis, events.first().timestampMillis)
         }
 
         var offStart: Long? = null
         events.forEach { event ->
-            when (event.eventType) {
-                SCREEN_OFF -> if (offStart == null) offStart = event.timestampMillis
-                SCREEN_ON -> {
+            when (event.type) {
+                ScreenEventType.SCREEN_OFF -> if (offStart == null) offStart = event.timestampMillis
+                ScreenEventType.SCREEN_ON -> {
                     val start = offStart
                     if (start != null && event.timestampMillis > start) {
                         offIntervals += SleepInterval(start, event.timestampMillis)
@@ -186,17 +181,17 @@ object SleepAnalyzer {
     }
 
     private fun screenOnSessions(
-        events: List<ScreenEventEntity>,
+        events: List<ScreenEvent>,
         window: SleepWindow,
     ): List<AwakeSession> {
         if (events.isEmpty()) return emptyList()
 
         val sessions = mutableListOf<AwakeSession>()
-        var onStart: Long? = if (events.first().eventType == SCREEN_OFF) window.startMillis else null
+        var onStart: Long? = if (events.first().type == ScreenEventType.SCREEN_OFF) window.startMillis else null
         events.forEach { event ->
-            when (event.eventType) {
-                SCREEN_ON -> if (onStart == null) onStart = event.timestampMillis
-                SCREEN_OFF -> {
+            when (event.type) {
+                ScreenEventType.SCREEN_ON -> if (onStart == null) onStart = event.timestampMillis
+                ScreenEventType.SCREEN_OFF -> {
                     val start = onStart
                     if (start != null && event.timestampMillis > start) {
                         sessions += AwakeSession(start, event.timestampMillis)
@@ -414,8 +409,8 @@ object SleepAnalyzer {
 
     private fun minutesToMillis(minutes: Int): Long = minutes * 60_000L
 
-    private fun missingRecord(targetDate: LocalDate, nowMillis: Long): SleepRecordEntity =
-        SleepRecordEntity(
+    private fun missingRecord(targetDate: LocalDate, nowMillis: Long): SleepRecord =
+        SleepRecord(
             dateEpochDay = targetDate.toEpochDay(),
             sleepStartMillis = 0,
             sleepEndMillis = 0,
@@ -477,6 +472,7 @@ data class StressResult(
 data class StressTrendPoint(
     val date: LocalDate,
     val score: Double?,
+    val band: StressBand? = StressCalculator.bandForScore(score),
 )
 
 object StressCalculator {
@@ -485,8 +481,8 @@ object StressCalculator {
     const val SLEEP_WEIGHT = 0.3
 
     fun calculate(
-        assessments: List<AssessmentRecordEntity>,
-        sleepRecords: List<SleepRecordEntity>,
+        assessments: List<AssessmentScoreRecord>,
+        sleepRecords: List<SleepRecord>,
         nowMillis: Long = System.currentTimeMillis(),
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): StressResult {
@@ -494,7 +490,12 @@ object StressCalculator {
         val latest = effectiveAssessments.maxByOrNull { it.createdAtMillis }
         val latestScore = latest?.let { normalizeAssessmentScore(it.totalScore) }
         val trendScore = assessmentTrendScore(effectiveAssessments, nowMillis, zoneId) ?: latestScore
-        val metrics = sleepMetrics(sleepRecords, zoneId)
+        val todayEpochDay = millisToDate(nowMillis, zoneId).toEpochDay()
+        val metrics = sleepMetrics(
+            records = sleepRecords,
+            zoneId = zoneId,
+            todayEpochDay = todayEpochDay,
+        )
         val sleepPenalty = if (metrics.hasSleepData) sleepPenaltyScore(metrics) else null
 
         if (latestScore == null) {
@@ -522,18 +523,22 @@ object StressCalculator {
             latestAssessmentScore = latestScore,
             trendAssessmentScore = trendScore,
             sleepPenaltyScore = sleepPenalty,
-            band = when {
-                score < 4.0 -> StressBand.LOW
-                score < 7.0 -> StressBand.MEDIUM
-                else -> StressBand.HIGH
-            },
+            band = bandForScore(score),
             metrics = metrics,
         )
     }
 
+    fun bandForScore(score: Double?): StressBand? =
+        when {
+            score == null -> null
+            score < 4.0 -> StressBand.LOW
+            score < 7.0 -> StressBand.MEDIUM
+            else -> StressBand.HIGH
+        }
+
     fun trendPoints(
-        assessments: List<AssessmentRecordEntity>,
-        sleepRecords: List<SleepRecordEntity>,
+        assessments: List<AssessmentScoreRecord>,
+        sleepRecords: List<SleepRecord>,
         endDate: LocalDate = LocalDate.now(),
         days: Int = 30,
         zoneId: ZoneId = ZoneId.systemDefault(),
@@ -565,9 +570,9 @@ object StressCalculator {
         (totalScore / 30.0 * 10.0).coerceIn(0.0, 10.0)
 
     private fun effectiveDailyAssessments(
-        records: List<AssessmentRecordEntity>,
+        records: List<AssessmentScoreRecord>,
         zoneId: ZoneId,
-    ): List<AssessmentRecordEntity> {
+    ): List<AssessmentScoreRecord> {
         return records
             .groupBy { millisToDate(it.createdAtMillis, zoneId) }
             .values
@@ -575,7 +580,7 @@ object StressCalculator {
     }
 
     private fun assessmentTrendScore(
-        records: List<AssessmentRecordEntity>,
+        records: List<AssessmentScoreRecord>,
         nowMillis: Long,
         zoneId: ZoneId,
     ): Double? {
@@ -601,11 +606,12 @@ object StressCalculator {
     }
 
     fun sleepMetrics(
-        records: List<SleepRecordEntity>,
+        records: List<SleepRecord>,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        todayEpochDay: Long = LocalDate.now(zoneId).toEpochDay(),
     ): SleepPenaltyMetrics {
         val recent = records
-            .filter { !it.isMissing && it.durationMinutes > 0 }
+            .filter { SleepRecordSelection.isUsable(it, todayEpochDay) }
             .sortedByDescending { it.dateEpochDay }
             .take(7)
             .sortedBy { it.dateEpochDay }

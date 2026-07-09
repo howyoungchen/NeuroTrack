@@ -4,11 +4,9 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.example.neurotrack.R
-import com.example.neurotrack.domain.SleepAnalyzer
-import com.example.neurotrack.domain.SleepRawDataCodec
 import com.example.neurotrack.domain.SleepRawDataExport
+import com.example.neurotrack.domain.SleepRawDataCodec
 import java.io.File
-import java.time.ZoneId
 
 object SleepRawDataExporter {
     private const val EXPORT_FILE_NAME = "neurotrack-sleep-raw.csv"
@@ -20,40 +18,19 @@ object SleepRawDataExporter {
     ): Intent {
         require(endMillis > startMillis) { "endMillis must be greater than startMillis" }
 
-        val zoneId = ZoneId.systemDefault()
-        val targetDate = SleepRawDataCodec.inferTargetDateForRange(
+        val analysis = SleepAnalysisRunner.android(context).runForRange(
             startMillis = startMillis,
             endMillis = endMillis,
-            zoneId = zoneId,
-        )
-        val usageObservations = UsageScreenEventReader.readSleepObservations(
-            context = context,
-            startMillis = startMillis,
-            endMillis = endMillis,
-        )
-        val locationSignals = LocationSleepSignalReader.readSignals(
-            context = context,
-            startMillis = startMillis,
-            endMillis = endMillis,
-            zoneId = zoneId,
-        )
-        val observations = usageObservations.copy(locationSignals = locationSignals)
-        val generatedAtMillis = System.currentTimeMillis()
-        val expectedResult = SleepAnalyzer.analyze(
-            targetDate = targetDate,
-            observations = observations,
-            zoneId = zoneId,
-            nowMillis = generatedAtMillis,
         )
         val body = SleepRawDataCodec.encode(
             SleepRawDataExport(
-                targetDate = targetDate,
-                zoneId = zoneId,
+                targetDate = analysis.targetDate,
+                zoneId = analysis.zoneId,
                 rangeStartMillis = startMillis,
                 rangeEndMillis = endMillis,
-                generatedAtMillis = generatedAtMillis,
-                observations = observations,
-                expectedResult = expectedResult,
+                generatedAtMillis = analysis.record.createdAtMillis,
+                observations = analysis.observations,
+                expectedResult = analysis.record,
             ),
         )
 

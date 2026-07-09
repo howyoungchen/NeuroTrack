@@ -1,6 +1,5 @@
 package com.example.neurotrack.domain
 
-import com.example.neurotrack.data.AssessmentRecordEntity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,15 +70,56 @@ class StressCalculatorTrendTest {
         assertTrue((points.last().score ?: 0.0) > (points.first().score ?: 0.0))
     }
 
+    @Test
+    fun bandForScore_usesSharedThresholds() {
+        assertNull(StressCalculator.bandForScore(null))
+        assertEquals(StressBand.LOW, StressCalculator.bandForScore(3.99))
+        assertEquals(StressBand.MEDIUM, StressCalculator.bandForScore(4.0))
+        assertEquals(StressBand.HIGH, StressCalculator.bandForScore(7.0))
+    }
+
+    @Test
+    fun calculate_ignoresFutureSleepRecordsInSleepMetrics() {
+        val result = StressCalculator.calculate(
+            assessments = listOf(assessment("2026-07-04", "10:00", totalScore = 15)),
+            sleepRecords = listOf(
+                sleepRecord(LocalDate.of(2026, 7, 4), durationMinutes = 480),
+                sleepRecord(LocalDate.of(2026, 7, 5), durationMinutes = 60),
+            ),
+            nowMillis = millis("2026-07-04", "12:00"),
+            zoneId = zoneId,
+        )
+
+        assertEquals(480.0, result.metrics.averageDurationMinutes, 0.0001)
+    }
+
     private fun assessment(
         date: String,
         time: String,
         totalScore: Int,
-    ): AssessmentRecordEntity =
-        AssessmentRecordEntity(
+    ): AssessmentScoreRecord =
+        AssessmentScoreRecord(
             createdAtMillis = millis(date, time),
-            answersCsv = "",
             totalScore = totalScore,
+        )
+
+    private fun sleepRecord(date: LocalDate, durationMinutes: Int): SleepRecord =
+        SleepRecord(
+            dateEpochDay = date.toEpochDay(),
+            sleepStartMillis = date.minusDays(1)
+                .atTime(LocalTime.of(23, 0))
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli(),
+            sleepEndMillis = date
+                .atTime(LocalTime.of(7, 0))
+                .atZone(zoneId)
+                .toInstant()
+                .toEpochMilli(),
+            durationMinutes = durationMinutes,
+            wakeUpCount = 0,
+            isMissing = false,
+            createdAtMillis = millis(date.toString(), "12:00"),
         )
 
     private fun millis(date: String, time: String): Long =

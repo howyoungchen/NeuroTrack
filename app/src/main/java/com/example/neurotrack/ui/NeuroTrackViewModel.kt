@@ -15,9 +15,10 @@ import com.example.neurotrack.background.NotificationHelper
 import com.example.neurotrack.background.SleepRawDataExporter
 import com.example.neurotrack.data.AssessmentRecordEntity
 import com.example.neurotrack.data.NeuroRepository
-import com.example.neurotrack.data.SleepRecordEntity
+import com.example.neurotrack.data.toDomainAssessment
+import com.example.neurotrack.data.toDomainSleepRecord
+import com.example.neurotrack.domain.SleepRecord
 import com.example.neurotrack.domain.StressCalculator
-import com.example.neurotrack.domain.StressResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,28 +28,33 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 data class NeuroTrackUiState(
-    val assessments: List<AssessmentRecordEntity> = emptyList(),
-    val sleepRecords: List<SleepRecordEntity> = emptyList(),
-    val stressResult: StressResult = StressCalculator.calculate(emptyList(), emptyList()),
+    val assessments: List<AssessmentHistoryItem> = emptyList(),
+    val sleepRecords: List<SleepRecord> = emptyList(),
+    val status: StatusDisplayModel = StatusDisplayModel.empty(),
 )
 
 class NeuroTrackViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as NeuroTrackApplication
     private val repository: NeuroRepository = app.container.repository
     private val settingsStore: SettingsStore = app.container.settingsStore
-    private val _latestSubmission = MutableStateFlow<AssessmentRecordEntity?>(null)
+    private val _latestSubmission = MutableStateFlow<AssessmentSubmissionDisplay?>(null)
 
     val settings: StateFlow<AppSettings> = settingsStore.settings
-    val latestSubmission: StateFlow<AssessmentRecordEntity?> = _latestSubmission
+    val latestSubmission: StateFlow<AssessmentSubmissionDisplay?> = _latestSubmission
 
     val uiState: StateFlow<NeuroTrackUiState> = combine(
         repository.assessmentHistory,
         repository.observeSleepRecords(LocalDate.now().minusDays(31).toEpochDay()),
     ) { assessments, sleepRecords ->
+        val domainAssessments = assessments.map { it.toDomainAssessment() }
+        val domainSleepRecords = sleepRecords.map { it.toDomainSleepRecord() }
         NeuroTrackUiState(
-            assessments = assessments,
-            sleepRecords = sleepRecords,
-            stressResult = StressCalculator.calculate(assessments, sleepRecords),
+            assessments = assessments.map { it.toHistoryItem() },
+            sleepRecords = domainSleepRecords,
+            status = buildStatusDisplayModel(
+                assessments = domainAssessments,
+                sleepRecords = domainSleepRecords,
+            ),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -59,11 +65,17 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
     fun submitAssessment(answers: List<Int>) {
         viewModelScope.launch {
             val record = repository.submitAssessment(answers)
-            _latestSubmission.value = record
+            _latestSubmission.value = AssessmentSubmissionDisplay(
+                id = record.id,
+                totalScore = record.totalScore,
+            )
 
             val currentState = uiState.value
             val stress = StressCalculator.calculate(
-                assessments = listOf(record) + currentState.assessments.filterNot { it.id == record.id },
+                assessments = listOf(record.toDomainAssessment()) +
+                    currentState.assessments
+                        .filterNot { it.id == record.id }
+                        .map { it.toDomainAssessment() },
                 sleepRecords = currentState.sleepRecords,
             )
             val score = stress.score
@@ -123,3 +135,17 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
             }
     }
 }
+
+private fun AssessmentRecordEntity.toHistoryItem(): AssessmentHistoryItem =
+    AssessmentHistoryItem(
+        id = id,
+        createdAtMillis = createdAtMillis,
+        answersCsv = answersCsv,
+        totalScore = totalScore,
+    )
+
+private fun AssessmentHistoryItem.toDomainAssessment() =
+    com.example.neurotrack.domain.AssessmentScoreRecord(
+        createdAtMillis = createdAtMillis,
+        totalScore = totalScore,
+    )

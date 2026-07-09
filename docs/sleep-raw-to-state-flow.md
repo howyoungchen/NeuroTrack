@@ -4,8 +4,11 @@
 
 - `app/src/main/java/com/example/neurotrack/domain/Analyzers.kt`
 - `app/src/main/java/com/example/neurotrack/domain/SleepRawDataCodec.kt`
+- `app/src/main/java/com/example/neurotrack/domain/SleepRawDataReplay.kt`
+- `app/src/main/java/com/example/neurotrack/background/SleepAnalysisRunner.kt`
 - `app/src/main/java/com/example/neurotrack/background/UsageScreenEventReader.kt`
 - `app/src/main/java/com/example/neurotrack/background/LocationSleepSignalReader.kt`
+- `app/src/main/java/com/example/neurotrack/domain/LocationSleepSignalDeriver.kt`
 - `app/src/main/java/com/example/neurotrack/background/SleepRawDataExporter.kt`
 
 ## 总流程图
@@ -14,12 +17,16 @@
 flowchart TD
     A[系统 raw 数据] --> B[UsageScreenEventReader.readSleepObservations]
     A --> C[LocationSleepSignalReader.readSignals]
+    B --> R[SleepAnalysisRunner]
+    C --> R
     B --> D[SleepObservations.screenEvents]
     B --> E[SleepObservations.interactionEvents]
-    C --> F[SleepObservations.locationSignals]
+    C --> C2[LocationSleepSignalDeriver.derive]
+    C2 --> F[SleepObservations.locationSignals]
     D --> G[SleepAnalyzer.analyze]
     E --> G
     F --> G
+    R --> G
     G --> H[按 targetDate 计算睡眠窗口]
     H --> I[过滤并按时间排序 raw 观测]
     I --> J[completeOffIntervals 生成息屏候选段]
@@ -31,16 +38,19 @@ flowchart TD
     F --> M
     M --> N[isPlausibleSleepCandidate 过滤不合理候选]
     N --> O[candidateScore 选择最终候选]
-    O --> P[SleepRecordEntity 睡眠状态]
+    O --> P[SleepRecord domain 睡眠状态]
 ```
 
 ## 输入数据
 
-当前睡眠整理逻辑只消费 `SleepObservations`：
+当前睡眠整理逻辑只消费 domain model：`SleepObservations`：
 
-- `screenEvents`：由 UsageStats 的 `SCREEN_INTERACTIVE` / `SCREEN_NON_INTERACTIVE` 映射为 `SCREEN_ON` / `SCREEN_OFF`。
+- `screenEvents`：由 UsageStats 的 `SCREEN_INTERACTIVE` / `SCREEN_NON_INTERACTIVE` 映射为 domain `ScreenEventType.SCREEN_ON` / `ScreenEventType.SCREEN_OFF`。
 - `interactionEvents`：由 UsageStats 的 `KEYGUARD_HIDDEN`、`USER_INTERACTION`、`ACTIVITY_RESUMED`、`MOVE_TO_FOREGROUND` 映射为解锁、用户交互、前台应用使用。
-- `locationSignals`：由最近可用定位生成本地派生信号，只包含 `atSleepPlace`、`stationary`、`leftSleepPlace`，不保存原始经纬度轨迹。
+- `locationSignals`：`LocationSleepSignalReader` 只做 Android 定位 adapter；`LocationSleepSignalDeriver` 从最近可用定位样本生成本地派生信号，只包含 `atSleepPlace`、`stationary`、`leftSleepPlace`，不保存原始经纬度轨迹。
+
+`SleepAnalysisRunner` 是 worker 和 raw 导出的共享入口，集中 target date、窗口、观测读取、定位信号合并和 `SleepAnalyzer.analyze` 调用。
+后台保存时，data adapter 会把 domain `SleepRecord` 映射为 Room `SleepRecordEntity`。
 
 ## 时间窗口
 
@@ -91,7 +101,7 @@ flowchart TD
 adb exec-out run-as com.example.neurotrack cat cache/exports/neurotrack-sleep-raw.csv > app/src/test/resources/sleep-raw/device-case.csv
 ```
 
-然后运行固定测试：
+然后运行固定测试。测试通过 `SleepRawDataReplay.replay` 回放 fixture，避免在测试里重复 raw 数据到睡眠状态的编排：
 
 ```powershell
 .\gradlew.bat :app:testDebugUnitTest --tests "com.example.neurotrack.domain.SleepRawDataCodecTest"

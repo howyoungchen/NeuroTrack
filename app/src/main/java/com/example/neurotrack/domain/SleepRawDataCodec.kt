@@ -1,7 +1,4 @@
 package com.example.neurotrack.domain
-
-import com.example.neurotrack.data.ScreenEventEntity
-import com.example.neurotrack.data.SleepRecordEntity
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -15,7 +12,7 @@ data class SleepRawDataExport(
     val rangeEndMillis: Long,
     val generatedAtMillis: Long,
     val observations: SleepObservations,
-    val expectedResult: SleepRecordEntity? = null,
+    val expectedResult: SleepRecord? = null,
 )
 
 object SleepRawDataCodec {
@@ -62,7 +59,7 @@ object SleepRawDataCodec {
                         "screen_event",
                         event.timestampMillis,
                         formatMillis(event.timestampMillis, export.zoneId, formatter),
-                        event.eventType,
+                        event.type.name,
                     ).joinToString(","),
                 )
             }
@@ -115,8 +112,8 @@ object SleepRawDataCodec {
         var targetDate: LocalDate? = null
         var rangeStartMillis: Long? = null
         var rangeEndMillis: Long? = null
-        var expectedResult: SleepRecordEntity? = null
-        val screenEvents = mutableListOf<ScreenEventEntity>()
+        var expectedResult: SleepRecord? = null
+        val screenEvents = mutableListOf<ScreenEvent>()
         val interactionEvents = mutableListOf<DeviceInteractionEvent>()
         val locationSignals = mutableListOf<LocationSleepSignal>()
 
@@ -151,9 +148,9 @@ object SleepRawDataCodec {
                 }
                 "screen_event" -> {
                     requireColumnCount(columns, 4, index)
-                    screenEvents += ScreenEventEntity(
+                    screenEvents += ScreenEvent(
                         timestampMillis = columns[1].toLong(),
-                        eventType = columns[3],
+                        type = ScreenEventType.valueOf(columns[3]),
                     )
                 }
                 "interaction_event" -> {
@@ -174,7 +171,7 @@ object SleepRawDataCodec {
                 }
                 "expected_result" -> {
                     requireColumnCount(columns, 8, index)
-                    expectedResult = SleepRecordEntity(
+                    expectedResult = SleepRecord(
                         dateEpochDay = columns[1].toLong(),
                         sleepStartMillis = columns[2].toLong(),
                         sleepEndMillis = columns[3].toLong(),

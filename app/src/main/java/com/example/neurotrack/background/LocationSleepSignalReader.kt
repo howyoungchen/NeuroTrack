@@ -7,16 +7,12 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
+import com.example.neurotrack.domain.LocationSample
 import com.example.neurotrack.domain.LocationSleepSignal
-import java.time.Instant
-import java.time.LocalTime
+import com.example.neurotrack.domain.LocationSleepSignalDeriver
 import java.time.ZoneId
 
 object LocationSleepSignalReader {
-    private const val SLEEP_PLACE_RADIUS_METERS = 200f
-    private const val LEFT_SLEEP_PLACE_METERS = 350f
-    private const val MOVING_SPEED_METERS_PER_SECOND = 1.2f
-
     fun hasLocationPermission(context: Context): Boolean =
         ContextCompat.checkSelfPermission(
             context,
@@ -41,19 +37,10 @@ object LocationSleepSignalReader {
             .filter { it.time in startMillis..endMillis }
             .sortedBy { it.time }
 
-        if (locations.isEmpty()) return emptyList()
-
-        val sleepAnchor = locations.firstOrNull { it.isInCoreSleepTime(zoneId) }
-        return locations.map { location ->
-            val distanceFromSleepAnchor = sleepAnchor?.distanceTo(location)
-            val atSleepPlace = distanceFromSleepAnchor?.let { it <= SLEEP_PLACE_RADIUS_METERS }
-            LocationSleepSignal(
-                timestampMillis = location.time,
-                atSleepPlace = atSleepPlace,
-                stationary = location.stationarySignal(),
-                leftSleepPlace = distanceFromSleepAnchor?.let { it >= LEFT_SLEEP_PLACE_METERS } == true,
-            )
-        }
+        return LocationSleepSignalDeriver.derive(
+            samples = locations.map { it.toLocationSample() },
+            zoneId = zoneId,
+        )
     }
 
     @SuppressLint("MissingPermission")
@@ -65,11 +52,11 @@ object LocationSleepSignalReader {
                 }
         }.getOrDefault(emptyList())
 
-    private fun Location.isInCoreSleepTime(zoneId: ZoneId): Boolean {
-        val time = Instant.ofEpochMilli(time).atZone(zoneId).toLocalTime()
-        return !time.isBefore(LocalTime.MIDNIGHT) && time.isBefore(LocalTime.of(5, 0))
-    }
-
-    private fun Location.stationarySignal(): Boolean? =
-        if (hasSpeed()) speed < MOVING_SPEED_METERS_PER_SECOND else null
+    private fun Location.toLocationSample(): LocationSample =
+        LocationSample(
+            timestampMillis = time,
+            latitude = latitude,
+            longitude = longitude,
+            speedMetersPerSecond = if (hasSpeed()) speed else null,
+        )
 }
