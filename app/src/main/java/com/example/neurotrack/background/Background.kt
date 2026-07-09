@@ -34,7 +34,6 @@ import java.io.File
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -204,19 +203,27 @@ class SleepAnalysisWorker(
     override suspend fun doWork(): Result {
         val repository = repository(applicationContext)
         return runCatching {
-            val targetDate = LocalDate.now()
+            val targetDate = SleepAnalyzer.targetDateForAnalysis()
             val window = SleepAnalyzer.windowFor(targetDate)
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
                 repository.log("WARN", "SleepWorker", "Screen usage events require Android 9 or newer")
             } else if (!UsageScreenEventReader.hasUsageStatsAccess(applicationContext)) {
                 repository.log("WARN", "SleepWorker", "Usage stats access is not granted")
             }
-            val events = UsageScreenEventReader.readScreenEvents(
+            val usageObservations = UsageScreenEventReader.readSleepObservations(
                 context = applicationContext,
                 startMillis = window.startMillis,
                 endMillis = window.endMillis,
             )
-            val record = SleepAnalyzer.analyze(targetDate, events)
+            val locationSignals = LocationSleepSignalReader.readSignals(
+                context = applicationContext,
+                startMillis = window.startMillis,
+                endMillis = window.endMillis,
+            )
+            val record = SleepAnalyzer.analyze(
+                targetDate = targetDate,
+                observations = usageObservations.copy(locationSignals = locationSignals),
+            )
             repository.saveSleepRecord(record)
             repository.pruneLogs(TimeUnit.DAYS.toMillis(30))
             Result.success()
@@ -288,6 +295,10 @@ object LogExporter {
 }
 
 object PermissionIntents {
+    fun appSettings(context: Context): Intent =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            .setData(Uri.parse("package:${context.packageName}"))
+
     fun notificationSettings(context: Context): Intent =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)

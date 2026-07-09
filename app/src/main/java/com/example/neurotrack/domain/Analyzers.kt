@@ -7,6 +7,7 @@ import com.example.neurotrack.data.ScreenEventEntity
 import com.example.neurotrack.data.SleepRecordEntity
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -16,13 +17,51 @@ import kotlin.math.sqrt
 object SleepRules {
     const val NIGHT_WINDOW_START_HOUR = 20
     const val NIGHT_WINDOW_END_HOUR = 12
-    const val SHORT_AWAKE_MERGE_MINUTES = 15
+    const val CORE_SLEEP_START_HOUR = 0
+    const val CORE_SLEEP_END_HOUR = 8
+    const val LATEST_SLEEP_START_HOUR = 5
+    const val MORNING_WAKE_HOUR = 5
     const val MIN_SLEEP_MINUTES = 120
+    const val MAX_SLEEP_MINUTES = 13 * 60
+    const val MIN_CORE_SLEEP_OVERLAP_MINUTES = 120
+    const val MICRO_AWAKE_MERGE_SECONDS = 90
+    const val MAX_AWAKE_MERGE_MINUTES = 15
+    const val MORNING_LONG_SCREEN_ON_WAKE_MINUTES = 5
+    const val NIGHT_LONG_SCREEN_ON_WAKE_MINUTES = 10
+    const val MORNING_ACTIVE_CLUSTER_WINDOW_MINUTES = 30
+    const val MORNING_ACTIVE_CLUSTER_COUNT = 3
+    const val MORNING_ACTIVE_CLUSTER_TOTAL_SECONDS = 3 * 60
+    const val NIGHT_ACTIVE_CLUSTER_COUNT = 4
+    const val NIGHT_ACTIVE_CLUSTER_TOTAL_SECONDS = 6 * 60
 }
 
 data class SleepWindow(
     val startMillis: Long,
     val endMillis: Long,
+)
+
+enum class DeviceInteractionType {
+    KEYGUARD_UNLOCKED,
+    USER_INTERACTION,
+    FOREGROUND_APP,
+}
+
+data class DeviceInteractionEvent(
+    val timestampMillis: Long,
+    val type: DeviceInteractionType,
+)
+
+data class LocationSleepSignal(
+    val timestampMillis: Long,
+    val atSleepPlace: Boolean? = null,
+    val stationary: Boolean? = null,
+    val leftSleepPlace: Boolean = false,
+)
+
+data class SleepObservations(
+    val screenEvents: List<ScreenEventEntity>,
+    val interactionEvents: List<DeviceInteractionEvent> = emptyList(),
+    val locationSignals: List<LocationSleepSignal> = emptyList(),
 )
 
 object SleepAnalyzer {
@@ -40,87 +79,196 @@ object SleepAnalyzer {
         return SleepWindow(start, end)
     }
 
+    fun targetDateForAnalysis(
+        now: LocalDateTime = LocalDateTime.now(),
+    ): LocalDate =
+        if (now.toLocalTime().isBefore(LocalTime.NOON)) {
+            now.toLocalDate().minusDays(1)
+        } else {
+            now.toLocalDate()
+        }
+
     fun analyze(
         targetDate: LocalDate,
         events: List<ScreenEventEntity>,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
+    ): SleepRecordEntity =
+        analyze(
+            targetDate = targetDate,
+            observations = SleepObservations(screenEvents = events),
+            zoneId = zoneId,
+            nowMillis = nowMillis,
+        )
+
+    fun analyze(
+        targetDate: LocalDate,
+        observations: SleepObservations,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        nowMillis: Long = System.currentTimeMillis(),
     ): SleepRecordEntity {
         val window = windowFor(targetDate, zoneId)
-        val sorted = events
+        val sortedScreenEvents = observations.screenEvents
             .filter { it.timestampMillis in window.startMillis..window.endMillis }
             .sortedBy { it.timestampMillis }
+        val awakeSessions = screenOnSessions(sortedScreenEvents, window)
+        val interactions = observations.interactionEvents
+            .filter { it.timestampMillis in window.startMillis..window.endMillis }
+            .sortedBy { it.timestampMillis }
+        val locationSignals = observations.locationSignals
+            .filter { it.timestampMillis in window.startMillis..window.endMillis }
+            .sortedBy { it.timestampMillis }
+        val offIntervals = applyLocationWakeBoundaries(
+            intervals = completeOffIntervals(sortedScreenEvents, window),
+            locationSignals = locationSignals,
+            targetDate = targetDate,
+            zoneId = zoneId,
+        )
+        val merged = mergeSleepCompatibleIntervals(
+            intervals = offIntervals,
+            awakeSessions = awakeSessions,
+            interactions = interactions,
+            locationSignals = locationSignals,
+            targetDate = targetDate,
+            zoneId = zoneId,
+        )
+        val candidates = merged.filter { isPlausibleSleepCandidate(it, targetDate, zoneId) }
+        val selected = candidates.maxWithOrNull(
+            compareBy<MergedSleepInterval> {
+                candidateScore(it, locationSignals, targetDate, zoneId)
+            }.thenBy { it.durationMinutes() },
+        )
+        val durationMinutes = selected?.durationMinutes() ?: 0
 
-        val offIntervals = mutableListOf<Pair<Long, Long>>()
-        val first = sorted.firstOrNull()
-        if (first?.eventType == SCREEN_ON && first.timestampMillis > window.startMillis) {
-            offIntervals += window.startMillis to first.timestampMillis
-        }
-
-        var offStart: Long? = null
-        sorted.forEach { event ->
-            when (event.eventType) {
-                SCREEN_OFF -> if (offStart == null) offStart = event.timestampMillis
-                SCREEN_ON -> {
-                    val start = offStart
-                    if (start != null && event.timestampMillis > start) {
-                        offIntervals += start to event.timestampMillis
-                    }
-                    offStart = null
-                }
-            }
-        }
-        offStart?.let { start ->
-            if (window.endMillis > start) offIntervals += start to window.endMillis
-        }
-
-        val merged = mergeShortAwakeGaps(offIntervals)
-        val longest = merged.maxByOrNull { it.endMillis - it.startMillis }
-        val durationMinutes = longest?.let { ((it.endMillis - it.startMillis) / 60_000L).toInt() } ?: 0
-
-        return if (longest == null || durationMinutes < SleepRules.MIN_SLEEP_MINUTES) {
-            SleepRecordEntity(
-                dateEpochDay = targetDate.toEpochDay(),
-                sleepStartMillis = 0,
-                sleepEndMillis = 0,
-                durationMinutes = 0,
-                wakeUpCount = 0,
-                isMissing = true,
-                createdAtMillis = nowMillis,
-            )
+        return if (selected == null || durationMinutes < SleepRules.MIN_SLEEP_MINUTES) {
+            missingRecord(targetDate, nowMillis)
         } else {
             SleepRecordEntity(
                 dateEpochDay = targetDate.toEpochDay(),
-                sleepStartMillis = longest.startMillis,
-                sleepEndMillis = longest.endMillis,
+                sleepStartMillis = selected.startMillis,
+                sleepEndMillis = selected.endMillis,
                 durationMinutes = durationMinutes,
-                wakeUpCount = longest.wakeUps,
+                wakeUpCount = selected.wakeUps,
                 isMissing = false,
                 createdAtMillis = nowMillis,
             )
         }
     }
 
-    private fun mergeShortAwakeGaps(intervals: List<Pair<Long, Long>>): List<MergedSleepInterval> {
+    private fun completeOffIntervals(
+        events: List<ScreenEventEntity>,
+        window: SleepWindow,
+    ): List<SleepInterval> {
+        if (events.isEmpty()) return emptyList()
+
+        val offIntervals = mutableListOf<SleepInterval>()
+        if (events.first().eventType == SCREEN_ON && events.first().timestampMillis > window.startMillis) {
+            offIntervals += SleepInterval(window.startMillis, events.first().timestampMillis)
+        }
+
+        var offStart: Long? = null
+        events.forEach { event ->
+            when (event.eventType) {
+                SCREEN_OFF -> if (offStart == null) offStart = event.timestampMillis
+                SCREEN_ON -> {
+                    val start = offStart
+                    if (start != null && event.timestampMillis > start) {
+                        offIntervals += SleepInterval(start, event.timestampMillis)
+                    }
+                    offStart = null
+                }
+            }
+        }
+        offStart?.let { start ->
+            if (window.endMillis > start) offIntervals += SleepInterval(start, window.endMillis)
+        }
+        return offIntervals.filter { it.endMillis > it.startMillis }
+    }
+
+    private fun screenOnSessions(
+        events: List<ScreenEventEntity>,
+        window: SleepWindow,
+    ): List<AwakeSession> {
+        if (events.isEmpty()) return emptyList()
+
+        val sessions = mutableListOf<AwakeSession>()
+        var onStart: Long? = if (events.first().eventType == SCREEN_OFF) window.startMillis else null
+        events.forEach { event ->
+            when (event.eventType) {
+                SCREEN_ON -> if (onStart == null) onStart = event.timestampMillis
+                SCREEN_OFF -> {
+                    val start = onStart
+                    if (start != null && event.timestampMillis > start) {
+                        sessions += AwakeSession(start, event.timestampMillis)
+                    }
+                    onStart = null
+                }
+            }
+        }
+        onStart?.let { start ->
+            if (window.endMillis > start) sessions += AwakeSession(start, window.endMillis)
+        }
+        return sessions
+    }
+
+    private fun applyLocationWakeBoundaries(
+        intervals: List<SleepInterval>,
+        locationSignals: List<LocationSleepSignal>,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): List<SleepInterval> {
+        if (intervals.isEmpty() || locationSignals.isEmpty()) return intervals
+        val wakeSignals = locationSignals.filter { isStrongLocationWake(it, targetDate, zoneId) }
+        if (wakeSignals.isEmpty()) return intervals
+
+        return intervals.mapNotNull { interval ->
+            val boundary = wakeSignals
+                .filter { it.timestampMillis in (interval.startMillis + 1) until interval.endMillis }
+                .minOfOrNull { it.timestampMillis }
+            val end = boundary ?: interval.endMillis
+            if (end > interval.startMillis) {
+                SleepInterval(interval.startMillis, end)
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun mergeSleepCompatibleIntervals(
+        intervals: List<SleepInterval>,
+        awakeSessions: List<AwakeSession>,
+        interactions: List<DeviceInteractionEvent>,
+        locationSignals: List<LocationSleepSignal>,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): List<MergedSleepInterval> {
         if (intervals.isEmpty()) return emptyList()
         val sorted = intervals
-            .filter { it.second > it.first }
-            .sortedBy { it.first }
+            .filter { it.endMillis > it.startMillis }
+            .sortedBy { it.startMillis }
         if (sorted.isEmpty()) return emptyList()
 
         val merged = mutableListOf<MergedSleepInterval>()
-        var start = sorted.first().first
-        var end = sorted.first().second
+        var start = sorted.first().startMillis
+        var end = sorted.first().endMillis
         var wakeUps = 0
-        sorted.drop(1).forEach { (nextStart, nextEnd) ->
-            val gapMinutes = (nextStart - end) / 60_000L
-            if (gapMinutes >= 0 && gapMinutes < SleepRules.SHORT_AWAKE_MERGE_MINUTES) {
+        sorted.drop(1).forEach { next ->
+            if (isSleepCompatibleAwakeGap(
+                    gapStartMillis = end,
+                    gapEndMillis = next.startMillis,
+                    awakeSessions = awakeSessions,
+                    interactions = interactions,
+                    locationSignals = locationSignals,
+                    targetDate = targetDate,
+                    zoneId = zoneId,
+                )
+            ) {
                 wakeUps += 1
-                end = maxOf(end, nextEnd)
+                end = maxOf(end, next.endMillis)
             } else {
                 merged += MergedSleepInterval(start, end, wakeUps)
-                start = nextStart
-                end = nextEnd
+                start = next.startMillis
+                end = next.endMillis
                 wakeUps = 0
             }
         }
@@ -128,11 +276,174 @@ object SleepAnalyzer {
         return merged
     }
 
+    private fun isSleepCompatibleAwakeGap(
+        gapStartMillis: Long,
+        gapEndMillis: Long,
+        awakeSessions: List<AwakeSession>,
+        interactions: List<DeviceInteractionEvent>,
+        locationSignals: List<LocationSleepSignal>,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): Boolean {
+        if (gapEndMillis < gapStartMillis) return false
+
+        val gapSeconds = (gapEndMillis - gapStartMillis) / 1_000L
+        val gapMinutes = gapSeconds / 60L
+        if (gapMinutes >= SleepRules.MAX_AWAKE_MERGE_MINUTES) return false
+
+        if (locationSignals.any {
+                it.timestampMillis in gapStartMillis..gapEndMillis &&
+                    isStrongLocationWake(it, targetDate, zoneId)
+            }
+        ) {
+            return false
+        }
+
+        val morning = gapStartMillis >= morningWakeStartMillis(targetDate, zoneId)
+        val cluster = awakeSessions.filter {
+            it.startMillis in
+                (gapStartMillis - minutesToMillis(15))..(gapStartMillis + minutesToMillis(
+                    SleepRules.MORNING_ACTIVE_CLUSTER_WINDOW_MINUTES,
+                ))
+        }
+        val clusterCount = cluster.size
+        val clusterSeconds = cluster.sumOf { it.durationSeconds() }
+        val hasUnlockOrAppUse = interactions.any {
+            it.timestampMillis in gapStartMillis..gapEndMillis &&
+                (it.type == DeviceInteractionType.KEYGUARD_UNLOCKED ||
+                    it.type == DeviceInteractionType.FOREGROUND_APP ||
+                    it.type == DeviceInteractionType.USER_INTERACTION)
+        }
+
+        return if (morning) {
+            if (gapMinutes >= SleepRules.MORNING_LONG_SCREEN_ON_WAKE_MINUTES) return false
+            if (hasUnlockOrAppUse && gapSeconds >= SleepRules.MICRO_AWAKE_MERGE_SECONDS) return false
+            if (clusterCount >= SleepRules.MORNING_ACTIVE_CLUSTER_COUNT) return false
+            if (clusterSeconds >= SleepRules.MORNING_ACTIVE_CLUSTER_TOTAL_SECONDS) return false
+            gapSeconds <= SleepRules.MICRO_AWAKE_MERGE_SECONDS
+        } else {
+            if (gapMinutes > SleepRules.NIGHT_LONG_SCREEN_ON_WAKE_MINUTES) return false
+            if (hasUnlockOrAppUse && gapMinutes >= 5) return false
+            if (
+                clusterCount >= SleepRules.NIGHT_ACTIVE_CLUSTER_COUNT &&
+                clusterSeconds >= SleepRules.NIGHT_ACTIVE_CLUSTER_TOTAL_SECONDS
+            ) {
+                return false
+            }
+            true
+        }
+    }
+
+    private fun isPlausibleSleepCandidate(
+        interval: MergedSleepInterval,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): Boolean {
+        val durationMinutes = interval.durationMinutes()
+        if (durationMinutes !in SleepRules.MIN_SLEEP_MINUTES..SleepRules.MAX_SLEEP_MINUTES) return false
+        if (interval.startMillis > latestSleepStartMillis(targetDate, zoneId)) return false
+        return coreSleepOverlapMinutes(interval, targetDate, zoneId) >=
+            SleepRules.MIN_CORE_SLEEP_OVERLAP_MINUTES
+    }
+
+    private fun candidateScore(
+        interval: MergedSleepInterval,
+        locationSignals: List<LocationSleepSignal>,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): Int {
+        val duration = interval.durationMinutes()
+        val durationScore = when {
+            duration in 7 * 60..9 * 60 -> 240
+            duration in 6 * 60 until 7 * 60 -> 180
+            duration in 9 * 60..10 * 60 -> 180
+            duration in 5 * 60 until 6 * 60 -> 120
+            else -> 60
+        }
+        val coreScore = coreSleepOverlapMinutes(interval, targetDate, zoneId).coerceAtMost(8 * 60)
+        val locationScore = locationSignals.count {
+            it.timestampMillis in interval.startMillis..interval.endMillis &&
+                (it.atSleepPlace == true || it.stationary == true)
+        } * 20
+        return durationScore + coreScore + locationScore - (interval.wakeUps * 12)
+    }
+
+    private fun coreSleepOverlapMinutes(
+        interval: MergedSleepInterval,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): Int {
+        val coreStart = targetDate
+            .atTime(LocalTime.of(SleepRules.CORE_SLEEP_START_HOUR, 0))
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+        val coreEnd = targetDate
+            .atTime(LocalTime.of(SleepRules.CORE_SLEEP_END_HOUR, 0))
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+        val overlapStart = maxOf(interval.startMillis, coreStart)
+        val overlapEnd = minOf(interval.endMillis, coreEnd)
+        return ((overlapEnd - overlapStart).coerceAtLeast(0) / 60_000L).toInt()
+    }
+
+    private fun isStrongLocationWake(
+        signal: LocationSleepSignal,
+        targetDate: LocalDate,
+        zoneId: ZoneId,
+    ): Boolean {
+        if (signal.leftSleepPlace) return true
+        val isMorning = signal.timestampMillis >= morningWakeStartMillis(targetDate, zoneId)
+        return isMorning && (signal.atSleepPlace == false || signal.stationary == false)
+    }
+
+    private fun morningWakeStartMillis(targetDate: LocalDate, zoneId: ZoneId): Long =
+        targetDate
+            .atTime(LocalTime.of(SleepRules.MORNING_WAKE_HOUR, 0))
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+
+    private fun latestSleepStartMillis(targetDate: LocalDate, zoneId: ZoneId): Long =
+        targetDate
+            .atTime(LocalTime.of(SleepRules.LATEST_SLEEP_START_HOUR, 0))
+            .atZone(zoneId)
+            .toInstant()
+            .toEpochMilli()
+
+    private fun minutesToMillis(minutes: Int): Long = minutes * 60_000L
+
+    private fun missingRecord(targetDate: LocalDate, nowMillis: Long): SleepRecordEntity =
+        SleepRecordEntity(
+            dateEpochDay = targetDate.toEpochDay(),
+            sleepStartMillis = 0,
+            sleepEndMillis = 0,
+            durationMinutes = 0,
+            wakeUpCount = 0,
+            isMissing = true,
+            createdAtMillis = nowMillis,
+        )
+
+    private data class SleepInterval(
+        val startMillis: Long,
+        val endMillis: Long,
+    )
+
+    private data class AwakeSession(
+        val startMillis: Long,
+        val endMillis: Long,
+    ) {
+        fun durationSeconds(): Long = ((endMillis - startMillis) / 1_000L).coerceAtLeast(0)
+    }
+
     private data class MergedSleepInterval(
         val startMillis: Long,
         val endMillis: Long,
         val wakeUps: Int,
-    )
+    ) {
+        fun durationMinutes(): Int = ((endMillis - startMillis) / 60_000L).toInt()
+    }
 }
 
 enum class StressBand {

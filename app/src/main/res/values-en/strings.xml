@@ -92,6 +92,8 @@
     <string name="permission_notifications_desc">Used for weekly assessment reminders and elevated-pressure alerts.</string>
     <string name="permission_usage_stats">Usage access</string>
     <string name="permission_usage_stats_desc">Used to query screen interaction events from the past 24 hours and generate sleep status.</string>
+    <string name="permission_location">Location</string>
+    <string name="permission_location_desc">Optional local movement signal for wake-time boundaries; raw location tracks are not stored.</string>
     <string name="permission_battery">Battery optimization allowlist</string>
     <string name="permission_battery_desc">Helps daily background analysis run more reliably.</string>
     <string name="permission_exact_alarm">Exact alarm</string>

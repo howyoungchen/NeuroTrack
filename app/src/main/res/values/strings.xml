@@ -92,6 +92,8 @@
     <string name="permission_notifications_desc">用于发送每周自测提醒和压力过高警告。</string>
     <string name="permission_usage_stats">使用情况访问权限</string>
     <string name="permission_usage_stats_desc">用于回查过去 24 小时的屏幕交互事件，生成睡眠状态。</string>
+    <string name="permission_location">定位权限</string>
+    <string name="permission_location_desc">可选，用本地移动状态辅助判断起床边界；不保存原始位置轨迹。</string>
     <string name="permission_battery">电池优化白名单</string>
     <string name="permission_battery_desc">有助于让每日后台分析更稳定。</string>
     <string name="permission_exact_alarm">精确闹钟</string>

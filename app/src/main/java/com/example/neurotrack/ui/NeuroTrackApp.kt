@@ -105,6 +105,7 @@ import androidx.core.content.ContextCompat
 import com.example.neurotrack.BuildConfig
 import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
+import com.example.neurotrack.background.LocationSleepSignalReader
 import com.example.neurotrack.background.PermissionIntents
 import com.example.neurotrack.data.AssessmentRecordEntity
 import com.example.neurotrack.data.SleepRecordEntity
@@ -1397,10 +1398,18 @@ private fun PermissionSection() {
     ) {
         refreshTick += 1
     }
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        refreshTick += 1
+    }
     val notificationGranted = remember(refreshTick) {
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
             PackageManager.PERMISSION_GRANTED
+    }
+    val locationGranted = remember(refreshTick) {
+        LocationSleepSignalReader.hasLocationPermission(context)
     }
     val usageStatsGranted = remember(refreshTick) {
         PermissionIntents.hasUsageStatsAccess(context)
@@ -1455,6 +1464,20 @@ private fun PermissionSection() {
                 } else {
                     openIntent(context, PermissionIntents.notificationSettings(context))
                 }
+            },
+        )
+        PermissionRow(
+            title = stringResource(R.string.permission_location),
+            subtitle = stringResource(R.string.permission_location_desc),
+            granted = locationGranted,
+            icon = Icons.Rounded.Info,
+            onClick = {
+                if (!locationGranted) {
+                    locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                } else {
+                    openIntent(context, PermissionIntents.appSettings(context))
+                }
+                refreshTick += 1
             },
         )
         PermissionRow(

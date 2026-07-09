@@ -8,6 +8,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 
@@ -21,6 +22,22 @@ class SleepAnalyzerTest {
 
         assertEquals(millis("2026-07-03", "20:00"), window.startMillis)
         assertEquals(millis("2026-07-04", "12:00"), window.endMillis)
+    }
+
+    @Test
+    fun targetDateForAnalysis_beforeNoonUsesYesterday() {
+        assertEquals(
+            LocalDate.of(2026, 7, 8),
+            SleepAnalyzer.targetDateForAnalysis(LocalDateTime.of(2026, 7, 9, 11, 37)),
+        )
+    }
+
+    @Test
+    fun targetDateForAnalysis_afterNoonUsesToday() {
+        assertEquals(
+            LocalDate.of(2026, 7, 9),
+            SleepAnalyzer.targetDateForAnalysis(LocalDateTime.of(2026, 7, 9, 12, 0)),
+        )
     }
 
     @Test
@@ -65,6 +82,82 @@ class SleepAnalyzerTest {
         assertEquals(millis("2026-07-04", "07:00"), record.sleepEndMillis)
         assertEquals(480, record.durationMinutes)
         assertEquals(1, record.wakeUpCount)
+    }
+
+    @Test
+    fun analyze_stopsAtFirstMorningScreenUseWhenShortWakeupsBecomeFrequent() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = listOf(
+                event("2026-07-03", "23:00", SCREEN_OFF),
+                event("2026-07-04", "08:50", SCREEN_ON),
+                event("2026-07-04", "08:50:05", SCREEN_OFF),
+                event("2026-07-04", "08:53", SCREEN_ON),
+                event("2026-07-04", "08:53:10", SCREEN_OFF),
+                event("2026-07-04", "08:55", SCREEN_ON),
+                event("2026-07-04", "08:55:08", SCREEN_OFF),
+                event("2026-07-04", "09:00", SCREEN_ON),
+                event("2026-07-04", "09:00:10", SCREEN_OFF),
+                event("2026-07-04", "11:53", SCREEN_ON),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertFalse(record.isMissing)
+        assertEquals(millis("2026-07-03", "23:00"), record.sleepStartMillis)
+        assertEquals(millis("2026-07-04", "08:50"), record.sleepEndMillis)
+        assertEquals(590, record.durationMinutes)
+        assertEquals(0, record.wakeUpCount)
+    }
+
+    @Test
+    fun analyze_stopsAtLongMorningScreenUse() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            events = listOf(
+                event("2026-07-03", "23:00", SCREEN_OFF),
+                event("2026-07-04", "07:00", SCREEN_ON),
+                event("2026-07-04", "07:06", SCREEN_OFF),
+                event("2026-07-04", "09:00", SCREEN_ON),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertFalse(record.isMissing)
+        assertEquals(millis("2026-07-03", "23:00"), record.sleepStartMillis)
+        assertEquals(millis("2026-07-04", "07:00"), record.sleepEndMillis)
+        assertEquals(480, record.durationMinutes)
+        assertEquals(0, record.wakeUpCount)
+    }
+
+    @Test
+    fun analyze_usesLocationWakeSignalInsideLongScreenOffInterval() {
+        val record = SleepAnalyzer.analyze(
+            targetDate = targetDate,
+            observations = SleepObservations(
+                screenEvents = listOf(
+                    event("2026-07-03", "23:00", SCREEN_OFF),
+                    event("2026-07-04", "10:00", SCREEN_ON),
+                ),
+                locationSignals = listOf(
+                    LocationSleepSignal(
+                        timestampMillis = millis("2026-07-04", "06:45"),
+                        atSleepPlace = false,
+                        stationary = false,
+                        leftSleepPlace = true,
+                    ),
+                ),
+            ),
+            zoneId = zoneId,
+            nowMillis = millis("2026-07-04", "12:05"),
+        )
+
+        assertFalse(record.isMissing)
+        assertEquals(millis("2026-07-03", "23:00"), record.sleepStartMillis)
+        assertEquals(millis("2026-07-04", "06:45"), record.sleepEndMillis)
+        assertEquals(465, record.durationMinutes)
     }
 
     @Test

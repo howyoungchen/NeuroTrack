@@ -9,6 +9,9 @@ import android.os.Process
 import com.example.neurotrack.data.SCREEN_OFF
 import com.example.neurotrack.data.SCREEN_ON
 import com.example.neurotrack.data.ScreenEventEntity
+import com.example.neurotrack.domain.DeviceInteractionEvent
+import com.example.neurotrack.domain.DeviceInteractionType
+import com.example.neurotrack.domain.SleepObservations
 
 object UsageScreenEventReader {
     @Suppress("DEPRECATION")
@@ -34,26 +37,44 @@ object UsageScreenEventReader {
         context: Context,
         startMillis: Long,
         endMillis: Long,
-    ): List<ScreenEventEntity> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return emptyList()
-        if (!hasUsageStatsAccess(context)) return emptyList()
+    ): List<ScreenEventEntity> =
+        readSleepObservations(context, startMillis, endMillis).screenEvents
+
+    fun readSleepObservations(
+        context: Context,
+        startMillis: Long,
+        endMillis: Long,
+    ): SleepObservations {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return emptyObservations()
+        if (!hasUsageStatsAccess(context)) return emptyObservations()
 
         val usageStatsManager = context.getSystemService(UsageStatsManager::class.java)
-            ?: return emptyList()
+            ?: return emptyObservations()
         val usageEvents = usageStatsManager.queryEvents(startMillis, endMillis)
         val event = UsageEvents.Event()
         val screenEvents = mutableListOf<ScreenEventEntity>()
+        val interactionEvents = mutableListOf<DeviceInteractionEvent>()
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event)
-            val type = screenEventTypeForUsageEventType(event.eventType) ?: continue
-            screenEvents += ScreenEventEntity(
-                timestampMillis = event.timeStamp,
-                eventType = type,
-            )
+            screenEventTypeForUsageEventType(event.eventType)?.let { type ->
+                screenEvents += ScreenEventEntity(
+                    timestampMillis = event.timeStamp,
+                    eventType = type,
+                )
+            }
+            interactionTypeForUsageEventType(event.eventType)?.let { type ->
+                interactionEvents += DeviceInteractionEvent(
+                    timestampMillis = event.timeStamp,
+                    type = type,
+                )
+            }
         }
 
-        return screenEvents.sortedBy { it.timestampMillis }
+        return SleepObservations(
+            screenEvents = screenEvents.sortedBy { it.timestampMillis },
+            interactionEvents = interactionEvents.sortedBy { it.timestampMillis },
+        )
     }
 
     internal fun screenEventTypeForUsageEventType(eventType: Int): String? =
@@ -62,4 +83,17 @@ object UsageScreenEventReader {
             UsageEvents.Event.SCREEN_NON_INTERACTIVE -> SCREEN_OFF
             else -> null
         }
+
+    @Suppress("DEPRECATION")
+    internal fun interactionTypeForUsageEventType(eventType: Int): DeviceInteractionType? =
+        when (eventType) {
+            UsageEvents.Event.KEYGUARD_HIDDEN -> DeviceInteractionType.KEYGUARD_UNLOCKED
+            UsageEvents.Event.USER_INTERACTION -> DeviceInteractionType.USER_INTERACTION
+            UsageEvents.Event.ACTIVITY_RESUMED,
+            UsageEvents.Event.MOVE_TO_FOREGROUND,
+            -> DeviceInteractionType.FOREGROUND_APP
+            else -> null
+        }
+
+    private fun emptyObservations(): SleepObservations = SleepObservations(screenEvents = emptyList())
 }
