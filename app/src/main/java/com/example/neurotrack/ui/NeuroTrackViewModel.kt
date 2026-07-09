@@ -12,6 +12,7 @@ import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.background.LogExporter
 import com.example.neurotrack.background.NeuroWorkScheduler
 import com.example.neurotrack.background.NotificationHelper
+import com.example.neurotrack.background.SleepRawDataExporter
 import com.example.neurotrack.data.AssessmentRecordEntity
 import com.example.neurotrack.data.NeuroRepository
 import com.example.neurotrack.data.SleepRecordEntity
@@ -98,6 +99,14 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
             val intent = LogExporter.createShareIntent(context, repository)
             context.startActivity(intent)
             repository.log("INFO", "Logs", "Log export shared")
+        }
+    }
+
+    fun exportSleepRawData(context: Context, startMillis: Long, endMillis: Long) {
+        viewModelScope.launch {
+            val intent = SleepRawDataExporter.createShareIntent(context, startMillis, endMillis)
+            context.startActivity(intent)
+            repository.log("INFO", "SleepRawExport", "Sleep raw data export shared start=$startMillis end=$endMillis")
         }
     }
 

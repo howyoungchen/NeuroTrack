@@ -14,6 +14,7 @@
     <string name="reminder_notification_title">Time for a status check</string>
     <string name="reminder_notification_text">No assessment was recorded this week. Take a minute to check in.</string>
     <string name="share_logs_title">Export NeuroTrack logs</string>
+    <string name="share_sleep_raw_data_title">Export sleep raw data</string>
 
     <string name="assessment_title">Past-week assessment</string>
     <string name="assessment_subtitle">Choose the option that best matches the past week.</string>
@@ -88,6 +89,7 @@
     <string name="settings_theme">Theme</string>
     <string name="settings_reminder">Assessment reminder</string>
     <string name="settings_logs">Log export</string>
+    <string name="settings_exports">Data export</string>
     <string name="permission_notifications">Notifications</string>
     <string name="permission_notifications_desc">Used for weekly assessment reminders and elevated-pressure alerts.</string>
     <string name="permission_usage_stats">Usage access</string>
@@ -116,6 +118,10 @@
     <string name="reminder_hour">Time</string>
     <string name="reminder_rule">A notification is sent only when no assessment exists in the past 7 days.</string>
     <string name="export_logs">Export logs</string>
+    <string name="export_sleep_raw_data">Export sleep raw data</string>
+    <string name="export_range_start">Start time (yyyy-MM-dd HH:mm)</string>
+    <string name="export_range_end">End time (yyyy-MM-dd HH:mm)</string>
+    <string name="export_range_invalid">Enter valid times, with the end time after the start time.</string>
 
     <string-array name="weekdays">
         <item>Mon</item>

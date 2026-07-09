@@ -14,6 +14,7 @@
     <string name="reminder_notification_title">该做一次状态自测了</string>
     <string name="reminder_notification_text">最近一周还没有记录，花一分钟了解当前状态。</string>
     <string name="share_logs_title">导出心迹日志</string>
+    <string name="share_sleep_raw_data_title">导出睡眠 raw 数据</string>
 
     <string name="assessment_title">过去一周自测</string>
     <string name="assessment_subtitle">选择最符合过去一周状态的选项。</string>
@@ -88,6 +89,7 @@
     <string name="settings_theme">主题</string>
     <string name="settings_reminder">评测提醒</string>
     <string name="settings_logs">日志导出</string>
+    <string name="settings_exports">数据导出</string>
     <string name="permission_notifications">通知权限</string>
     <string name="permission_notifications_desc">用于发送每周自测提醒和压力过高警告。</string>
     <string name="permission_usage_stats">使用情况访问权限</string>
@@ -116,6 +118,10 @@
     <string name="reminder_hour">时间</string>
     <string name="reminder_rule">仅当最近 7 天没有任何自测记录时发送通知。</string>
     <string name="export_logs">导出日志</string>
+    <string name="export_sleep_raw_data">导出睡眠 raw 数据</string>
+    <string name="export_range_start">开始时间（yyyy-MM-dd HH:mm）</string>
+    <string name="export_range_end">结束时间（yyyy-MM-dd HH:mm）</string>
+    <string name="export_range_invalid">请输入有效时间，并确保结束时间晚于开始时间。</string>
 
     <string-array name="weekdays">
         <item>周一</item>

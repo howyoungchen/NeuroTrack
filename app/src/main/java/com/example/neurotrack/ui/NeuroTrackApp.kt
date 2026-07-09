@@ -65,6 +65,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -109,6 +110,7 @@ import com.example.neurotrack.background.LocationSleepSignalReader
 import com.example.neurotrack.background.PermissionIntents
 import com.example.neurotrack.data.AssessmentRecordEntity
 import com.example.neurotrack.data.SleepRecordEntity
+import com.example.neurotrack.domain.SleepAnalyzer
 import com.example.neurotrack.domain.SleepPenaltyMetrics
 import com.example.neurotrack.domain.StressBand
 import com.example.neurotrack.domain.StressCalculator
@@ -116,6 +118,7 @@ import com.example.neurotrack.domain.StressResult
 import com.example.neurotrack.domain.StressTrendPoint
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -206,6 +209,7 @@ fun NeuroTrackRoot(
                         onThemeModeChange = viewModel::setThemeMode,
                         onReminderChange = viewModel::setReminder,
                         onExportLogs = viewModel::exportLogs,
+                        onExportSleepRawData = viewModel::exportSleepRawData,
                     )
                 }
             }
@@ -1361,6 +1365,7 @@ private fun SettingsScreen(
     onThemeModeChange: (String) -> Unit,
     onReminderChange: (Int, Int) -> Unit,
     onExportLogs: (Context) -> Unit,
+    onExportSleepRawData: (Context, Long, Long) -> Unit,
 ) {
     val context = LocalContext.current
     LazyColumn(
@@ -1381,7 +1386,12 @@ private fun SettingsScreen(
             ReminderSection(settings, onReminderChange)
         }
         item {
-            LogsSection(onExportLogs = { onExportLogs(context) })
+            ExportsSection(
+                onExportLogs = { onExportLogs(context) },
+                onExportSleepRawData = { startMillis, endMillis ->
+                    onExportSleepRawData(context, startMillis, endMillis)
+                },
+            )
         }
         item {
             AboutSection()
@@ -1664,13 +1674,67 @@ private fun DropdownSelector(
     }
 }
 
+private data class SleepRawExportRange(
+    val startMillis: Long,
+    val endMillis: Long,
+)
+
 @Composable
-private fun LogsSection(onExportLogs: () -> Unit) {
-    SectionCard(title = stringResource(R.string.settings_logs), icon = Icons.Rounded.Download) {
-        Button(onClick = onExportLogs, modifier = Modifier.fillMaxWidth()) {
+private fun ExportsSection(
+    onExportLogs: () -> Unit,
+    onExportSleepRawData: (Long, Long) -> Unit,
+) {
+    val defaultRange = remember { defaultSleepRawExportRange() }
+    var startText by rememberSaveable { mutableStateOf(formatDateTime(defaultRange.startMillis)) }
+    var endText by rememberSaveable { mutableStateOf(formatDateTime(defaultRange.endMillis)) }
+    val startMillis = remember(startText) { parseExportDateTime(startText) }
+    val endMillis = remember(endText) { parseExportDateTime(endText) }
+    val canExportSleepRawData = startMillis != null && endMillis != null && endMillis > startMillis
+
+    SectionCard(title = stringResource(R.string.settings_exports), icon = Icons.Rounded.Download) {
+        OutlinedButton(onClick = onExportLogs, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.Download, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.export_logs))
+        }
+        HorizontalDivider()
+        OutlinedTextField(
+            value = startText,
+            onValueChange = { startText = it },
+            label = { Text(stringResource(R.string.export_range_start)) },
+            singleLine = true,
+            isError = startText.isNotBlank() && startMillis == null,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = endText,
+            onValueChange = { endText = it },
+            label = { Text(stringResource(R.string.export_range_end)) },
+            singleLine = true,
+            isError = endText.isNotBlank() && endMillis == null,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (!canExportSleepRawData) {
+            Text(
+                text = stringResource(R.string.export_range_invalid),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        Button(
+            onClick = {
+                val start = startMillis
+                val end = endMillis
+                if (start != null && end != null && end > start) {
+                    onExportSleepRawData(start, end)
+                }
+            },
+            enabled = canExportSleepRawData,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Rounded.Download, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.export_sleep_raw_data))
         }
     }
 }
@@ -1800,6 +1864,23 @@ private fun formatDateTime(millis: Long): String {
         .toLocalDateTime()
         .format(formatter)
 }
+
+private fun defaultSleepRawExportRange(): SleepRawExportRange {
+    val window = SleepAnalyzer.windowFor(SleepAnalyzer.targetDateForAnalysis())
+    return SleepRawExportRange(
+        startMillis = window.startMillis,
+        endMillis = window.endMillis,
+    )
+}
+
+private fun parseExportDateTime(text: String): Long? =
+    runCatching {
+        LocalDateTime
+            .parse(text.trim(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+    }.getOrNull()
 
 private fun formatMonthDay(date: LocalDate): String =
     date.format(DateTimeFormatter.ofPattern("M/d", Locale.getDefault()))
