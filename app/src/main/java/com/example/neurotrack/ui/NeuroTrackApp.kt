@@ -18,7 +18,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,16 +31,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BatterySaver
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
@@ -48,30 +56,29 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -90,6 +97,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalContext
@@ -97,11 +105,15 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.neurotrack.BuildConfig
 import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
@@ -114,15 +126,14 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 enum class AppScreen(val titleRes: Int) {
-    Assessment(R.string.nav_assessment),
     Status(R.string.nav_status),
+    Assessment(R.string.nav_assessment),
     Settings(R.string.nav_settings),
 }
 
 fun destinationToScreen(destination: String?): AppScreen =
     if (destination == "assessment") AppScreen.Assessment else AppScreen.Status
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NeuroTrackRoot(
     viewModel: NeuroTrackViewModel,
@@ -134,75 +145,147 @@ fun NeuroTrackRoot(
     LocalizedResources(settings.languageTag) {
         val uiState by viewModel.uiState.collectAsState()
         val latestSubmission by viewModel.latestSubmission.collectAsState()
+        val useNavigationRail = LocalConfiguration.current.screenWidthDp >= 600
 
         Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(selectedScreen.titleRes),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                )
-            },
+            containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
-                NavigationBar {
-                    listOf(AppScreen.Assessment, AppScreen.Status, AppScreen.Settings).forEach { screen ->
-                        NavigationBarItem(
-                            selected = selectedScreen == screen,
-                            onClick = { selectedScreen = screen },
-                            icon = {
-                                Icon(
-                                    imageVector = when (screen) {
-                                        AppScreen.Assessment -> Icons.Rounded.CheckCircle
-                                        AppScreen.Status -> Icons.Rounded.Favorite
-                                        AppScreen.Settings -> Icons.Rounded.Settings
-                                    },
-                                    contentDescription = null,
-                                )
-                            },
-                            label = { Text(stringResource(screen.titleRes)) },
-                        )
-                    }
+                if (!useNavigationRail) {
+                    AppBottomNavigation(
+                        selectedScreen = selectedScreen,
+                        onSelect = { selectedScreen = it },
+                    )
                 }
             },
         ) { innerPadding ->
-            AnimatedContent(
-                targetState = selectedScreen,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(120))
-                },
-                label = "screen",
+            Row(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize(),
-            ) { screen ->
-                when (screen) {
-                    AppScreen.Assessment -> AssessmentScreen(
-                        uiState = uiState,
-                        latestSubmission = latestSubmission,
-                        onSubmit = viewModel::submitAssessment,
-                        onDismissResult = viewModel::clearLatestSubmission,
+            ) {
+                if (useNavigationRail) {
+                    AppNavigationRail(
+                        selectedScreen = selectedScreen,
+                        onSelect = { selectedScreen = it },
                     )
+                }
+                AnimatedContent(
+                    targetState = selectedScreen,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(120))
+                    },
+                    label = "screen",
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) { screen ->
+                    when (screen) {
+                        AppScreen.Assessment -> AssessmentScreen(
+                            uiState = uiState,
+                            latestSubmission = latestSubmission,
+                            onSubmit = viewModel::submitAssessment,
+                            onDismissResult = viewModel::clearLatestSubmission,
+                        )
 
-                    AppScreen.Status -> StatusScreen(
-                        status = uiState.status,
-                        onStartAssessment = { selectedScreen = AppScreen.Assessment },
-                    )
+                        AppScreen.Status -> StatusScreen(
+                            status = uiState.status,
+                            onStartAssessment = { selectedScreen = AppScreen.Assessment },
+                        )
 
-                    AppScreen.Settings -> SettingsScreen(
-                        settings = settings,
-                        onLanguageChange = viewModel::setLanguage,
-                        onThemeModeChange = viewModel::setThemeMode,
-                        onReminderChange = viewModel::setReminder,
-                        onExportLogs = viewModel::exportLogs,
-                        onExportSleepRawData = viewModel::exportSleepRawData,
-                    )
+                        AppScreen.Settings -> SettingsScreen(
+                            settings = settings,
+                            onLanguageChange = viewModel::setLanguage,
+                            onThemeModeChange = viewModel::setThemeMode,
+                            onReminderChange = viewModel::setReminder,
+                            onExportLogs = viewModel::exportLogs,
+                            onExportSleepRawData = viewModel::exportSleepRawData,
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+private val appScreens = listOf(AppScreen.Status, AppScreen.Assessment, AppScreen.Settings)
+
+private val AppScreen.icon: ImageVector
+    get() = when (this) {
+        AppScreen.Assessment -> Icons.Rounded.CheckCircle
+        AppScreen.Status -> Icons.Rounded.Favorite
+        AppScreen.Settings -> Icons.Rounded.Settings
+    }
+
+@Composable
+private fun AppBottomNavigation(
+    selectedScreen: AppScreen,
+    onSelect: (AppScreen) -> Unit,
+) {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            tonalElevation = 0.dp,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .clip(MaterialTheme.shapes.extraLarge),
+        ) {
+            appScreens.forEach { screen ->
+                NavigationBarItem(
+                    selected = selectedScreen == screen,
+                    onClick = { onSelect(screen) },
+                    icon = { Icon(screen.icon, contentDescription = null) },
+                    label = {
+                        Text(
+                            text = stringResource(screen.titleRes),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppNavigationRail(
+    selectedScreen: AppScreen,
+    onSelect: (AppScreen) -> Unit,
+) {
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier
+            .padding(start = 14.dp, top = 16.dp, bottom = 16.dp)
+            .clip(MaterialTheme.shapes.extraLarge),
+    ) {
+        Spacer(Modifier.weight(1f))
+        appScreens.forEach { screen ->
+            NavigationRailItem(
+                selected = selectedScreen == screen,
+                onClick = { onSelect(screen) },
+                icon = { Icon(screen.icon, contentDescription = null) },
+                label = {
+                    Text(
+                        text = stringResource(screen.titleRes),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            )
+        }
+        Spacer(Modifier.weight(1f))
     }
 }
 
@@ -248,12 +331,14 @@ private fun AssessmentScreen(
     var answers by rememberSaveable(questions.size) {
         mutableStateOf(List(questions.size) { -1 })
     }
+    var currentQuestion by rememberSaveable(questions.size) { mutableIntStateOf(0) }
     val answeredCount = answers.count { it >= 0 }
     val progress = answeredCount / questions.size.toFloat()
 
     LaunchedEffect(latestSubmission?.id) {
         if (latestSubmission != null) {
             answers = List(questions.size) { -1 }
+            currentQuestion = 0
         }
     }
 
@@ -264,77 +349,166 @@ private fun AssessmentScreen(
         )
     }
 
-    LazyColumn(
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = stringResource(R.string.assessment_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringResource(R.string.assessment_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    text = stringResource(R.string.assessment_progress, answeredCount, questions.size),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        items(questions.indices.toList()) { index ->
-            AssessmentQuestionCard(
-                index = index,
-                question = questions[index],
-                options = options,
-                selected = answers[index],
-                onSelect = { optionIndex ->
-                    answers = answers.toMutableList().also { it[index] = optionIndex }
-                },
-            )
-        }
-
-        item {
-            Button(
-                onClick = { onSubmit(answers) },
-                enabled = answers.all { it >= 0 },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Rounded.CheckCircle, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.assessment_submit))
-            }
-        }
-
-        item {
-            SectionTitle(text = stringResource(R.string.assessment_history_title))
-        }
-
-        if (uiState.assessments.isEmpty()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 840.dp)
+                .align(Alignment.TopCenter),
+        ) {
             item {
-                EmptyText(text = stringResource(R.string.assessment_history_empty))
-            }
-        } else {
-            items(uiState.assessments, key = { it.id }) { record ->
-                RecordRow(
-                    title = stringResource(
-                        R.string.assessment_history_item,
-                        formatDisplayDateTime(record.createdAtMillis),
-                        record.totalScore,
-                    ),
-                    subtitle = record.answersCsv,
+                PageHeader(
+                    title = stringResource(R.string.assessment_title),
+                    subtitle = stringResource(R.string.assessment_subtitle),
+                    icon = Icons.Rounded.CheckCircle,
                 )
+            }
+
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(18.dp),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.assessment_progress, answeredCount, questions.size),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.assessment_percent_format,
+                                    (progress * 100).roundToInt(),
+                                ),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        val progressColor = MaterialTheme.colorScheme.primary
+                        val progressTrack = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f)
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                        ) {
+                            val radius = size.height / 2f
+                            drawRoundRect(
+                                color = progressTrack,
+                                cornerRadius = CornerRadius(radius, radius),
+                            )
+                            if (progress > 0f) {
+                                drawRoundRect(
+                                    color = progressColor,
+                                    size = Size(size.width * progress.coerceIn(0f, 1f), size.height),
+                                    cornerRadius = CornerRadius(radius, radius),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                AnimatedContent(
+                    targetState = currentQuestion,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(100))
+                    },
+                    label = "assessment-question",
+                ) { questionIndex ->
+                    AssessmentQuestionCard(
+                        index = questionIndex,
+                        question = questions[questionIndex],
+                        options = options,
+                        selected = answers[questionIndex],
+                        onSelect = { optionIndex ->
+                            answers = replaceAssessmentAnswer(
+                                answers = answers,
+                                questionIndex = questionIndex,
+                                optionIndex = optionIndex,
+                            )
+                        },
+                    )
+                }
+            }
+
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedButton(
+                        onClick = { currentQuestion = (currentQuestion - 1).coerceAtLeast(0) },
+                        enabled = currentQuestion > 0,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.assessment_previous))
+                    }
+                    if (currentQuestion < questions.lastIndex) {
+                        Button(
+                            onClick = { currentQuestion += 1 },
+                            enabled = canAdvanceAssessment(answers, currentQuestion),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Text(stringResource(R.string.assessment_next))
+                            Spacer(Modifier.width(6.dp))
+                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null)
+                        }
+                    } else {
+                        Button(
+                            onClick = { onSubmit(answers) },
+                            enabled = canSubmitAssessment(answers),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Rounded.CheckCircle, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(stringResource(R.string.assessment_submit))
+                        }
+                    }
+                }
+            }
+
+            item {
+                Spacer(Modifier.height(4.dp))
+                SectionTitle(
+                    text = stringResource(R.string.assessment_history_title),
+                    supportingText = stringResource(R.string.assessment_history_subtitle),
+                )
+            }
+
+            if (uiState.assessments.isEmpty()) {
+                item {
+                    EmptyStateCard(
+                        text = stringResource(R.string.assessment_history_empty),
+                        icon = Icons.Rounded.Schedule,
+                    )
+                }
+            } else {
+                itemsIndexed(uiState.assessments, key = { _, item -> item.id }) { index, record ->
+                    RecordRow(
+                        index = index,
+                        title = stringResource(
+                            R.string.assessment_history_item,
+                            formatDisplayDateTime(record.createdAtMillis),
+                            record.totalScore,
+                        ),
+                    )
+                }
             }
         }
     }
@@ -348,62 +522,69 @@ private fun AssessmentQuestionCard(
     selected: Int,
     onSelect: (Int) -> Unit,
 ) {
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(18.dp),
         ) {
             Text(
-                text = "${index + 1}. $question",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
+                text = stringResource(R.string.assessment_question_number, index + 1),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
+            Text(
+                text = question,
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 options.forEachIndexed { optionIndex, option ->
                     val isSelected = selected == optionIndex
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = MaterialTheme.shapes.medium,
                         color = if (isSelected) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            MaterialTheme.colorScheme.surface
+                            MaterialTheme.colorScheme.surfaceContainer
                         },
                         contentColor = if (isSelected) {
                             MaterialTheme.colorScheme.onPrimaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurface
                         },
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.outlineVariant
-                            },
-                        ),
+                        border = if (isSelected) {
+                            BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                        } else {
+                            null
+                        },
                         modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 56.dp)
-                            .clickable { onSelect(optionIndex) },
+                            .fillMaxWidth()
+                            .heightIn(min = 54.dp)
+                            .selectable(
+                                selected = isSelected,
+                                onClick = { onSelect(optionIndex) },
+                                role = Role.RadioButton,
+                            ),
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = null,
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
                             Text(
                                 text = option,
-                                style = MaterialTheme.typography.labelMedium,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             )
                         }
                     }
@@ -417,6 +598,18 @@ private fun AssessmentQuestionCard(
 private fun ResultDialog(totalScore: Int, onDismiss: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
+        icon = {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                modifier = Modifier.size(52.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null)
+                }
+            }
+        },
         title = { Text(stringResource(R.string.assessment_result_title, totalScore)) },
         text = {
             Text(
@@ -428,10 +621,12 @@ private fun ResultDialog(totalScore: Int, onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
+            Button(onClick = onDismiss) {
                 Text(stringResource(R.string.assessment_result_close))
             }
         },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.extraLarge,
     )
 }
 
@@ -441,72 +636,114 @@ private fun StatusScreen(
     onStartAssessment: () -> Unit,
 ) {
     val stress = status.stress
-    LazyColumn(
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item {
-            if (stress.score == null) {
-                NoDataCard(onStartAssessment)
-            } else {
-                StressCard(stress)
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 840.dp)
+                .align(Alignment.TopCenter),
+        ) {
+            item {
+                PageHeader(
+                    title = stringResource(R.string.status_title),
+                    subtitle = stringResource(R.string.status_subtitle),
+                    icon = Icons.Rounded.Favorite,
+                )
             }
-        }
 
-        item {
-            StressGradientBar(score = stress.score, band = stress.band)
-        }
+            item {
+                if (stress.score == null) {
+                    NoDataCard(onStartAssessment)
+                } else {
+                    StressCard(stress)
+                }
+            }
 
-        item {
-            StressTrendCard(trend = status.pressureTrend)
-        }
+            item {
+                InsightsCard(insights = status.insights)
+            }
 
-        item {
-            YesterdaySleepStatusCard(summary = status.yesterdaySleep)
-        }
+            item {
+                Spacer(Modifier.height(4.dp))
+                SectionTitle(
+                    text = stringResource(R.string.status_sleep_section),
+                    supportingText = stringResource(R.string.status_sleep_section_subtitle),
+                )
+            }
 
-        item {
-            SleepStatusPeriodCard(
-                title = stringResource(R.string.status_sleep_week),
-                period = status.weekSleep,
-                days = 7,
-            )
-        }
+            item {
+                YesterdaySleepStatusCard(summary = status.yesterdaySleep)
+            }
 
-        item {
-            SleepStatusPeriodCard(
-                title = stringResource(R.string.status_sleep_month),
-                period = status.monthSleep,
-                days = 30,
-            )
-        }
+            item {
+                Spacer(Modifier.height(4.dp))
+                SectionTitle(
+                    text = stringResource(R.string.status_trends_section),
+                    supportingText = stringResource(R.string.status_trends_section_subtitle),
+                )
+            }
 
-        item {
-            InsightsCard(insights = status.insights)
+            item {
+                StressTrendCard(trend = status.pressureTrend)
+            }
+
+            item {
+                SleepStatusPeriodCard(
+                    title = stringResource(R.string.status_sleep_week),
+                    period = status.weekSleep,
+                    days = 7,
+                )
+            }
+
+            item {
+                SleepStatusPeriodCard(
+                    title = stringResource(R.string.status_sleep_month),
+                    period = status.monthSleep,
+                    days = 30,
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun NoDataCard(onStartAssessment: () -> Unit) {
-    ElevatedCard(
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialTheme.shapes.extraLarge,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.padding(20.dp),
         ) {
-            Text(
-                text = stringResource(R.string.status_no_data),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Button(onClick = onStartAssessment) {
-                Icon(Icons.Rounded.CheckCircle, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.status_go_assessment))
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                shape = CircleShape,
+                modifier = Modifier.size(56.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Favorite, contentDescription = null)
+                }
+            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = stringResource(R.string.status_no_data),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Button(onClick = onStartAssessment) {
+                    Text(stringResource(R.string.status_go_assessment))
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null)
+                }
             }
         }
     }
@@ -516,30 +753,49 @@ private fun NoDataCard(onStartAssessment: () -> Unit) {
 private fun StressCard(stress: StressResult) {
     val score = stress.score ?: return
     val color = stressColor(stress.band)
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = Modifier.padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.78f),
+                        ),
+                    ),
+                )
+                .padding(22.dp),
         ) {
-            StressGauge(score = score, color = color)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            StressGauge(
+                score = score,
+                color = color,
+                contentColor = stressBandContentColor(stress.band),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp), modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.status_stress_level),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.68f),
                 )
-                Text(
-                    text = stringResource(R.string.status_stress_format, score),
-                    style = MaterialTheme.typography.displaySmall,
+                Surface(
                     color = color,
-                    fontWeight = FontWeight.Bold,
+                    contentColor = stressBandContentColor(stress.band),
+                    shape = CircleShape,
                 )
+                {
+                    Text(
+                        text = stressBandLabel(stress.band),
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    )
+                }
                 Text(
                     text = when (stress.band) {
                         StressBand.LOW -> stringResource(R.string.status_stress_low)
@@ -548,6 +804,7 @@ private fun StressCard(stress: StressResult) {
                         null -> stringResource(R.string.status_no_data)
                     },
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
                 )
             }
         }
@@ -555,11 +812,15 @@ private fun StressCard(stress: StressResult) {
 }
 
 @Composable
-private fun StressGauge(score: Double, color: Color) {
-    val track = MaterialTheme.colorScheme.surfaceVariant
+private fun StressGauge(
+    score: Double,
+    color: Color,
+    contentColor: Color,
+) {
+    val track = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.12f)
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.size(112.dp),
+        modifier = Modifier.size(108.dp),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokeWidth = 12.dp.toPx()
@@ -584,79 +845,19 @@ private fun StressGauge(score: Double, color: Color) {
                 style = Stroke(strokeWidth, cap = StrokeCap.Round),
             )
         }
-        Text(
-            text = "${(score * 10).roundToInt()}%",
-            style = MaterialTheme.typography.labelLarge,
+        Surface(
             color = color,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-private fun StressGradientBar(score: Double?, band: StressBand?) {
-    ChartCard(title = stringResource(R.string.status_pressure_scale)) {
-        val markerColor = score?.let { stressColor(band) } ?: MaterialTheme.colorScheme.outline
-        val scoreText = score?.let { stringResource(R.string.status_score_format, it) }
-            ?: stringResource(R.string.status_missing)
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth(),
+            contentColor = contentColor,
+            shape = CircleShape,
+            modifier = Modifier.size(64.dp),
         ) {
-            Text(
-                text = scoreText,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = markerColor,
-            )
-            Text(
-                text = stringResource(R.string.status_pressure_scale_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(34.dp),
-        ) {
-            val barHeight = 18.dp.toPx()
-            val top = (size.height - barHeight) / 2f
-            drawRoundRect(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        Color(0xFF2E7D5B),
-                        Color(0xFFE0A82E),
-                        Color(0xFFBA1A1A),
-                    ),
-                ),
-                topLeft = Offset(0f, top),
-                size = Size(size.width, barHeight),
-                cornerRadius = CornerRadius(barHeight / 2f, barHeight / 2f),
-            )
-            score?.let {
-                val x = (it.coerceIn(0.0, 10.0) / 10.0 * size.width).toFloat()
-                drawCircle(
-                    color = Color.White,
-                    radius = 10.dp.toPx(),
-                    center = Offset(x, size.height / 2f),
-                )
-                drawCircle(
-                    color = markerColor,
-                    radius = 7.dp.toPx(),
-                    center = Offset(x, size.height / 2f),
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = stringResource(R.string.status_score_format, score),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
                 )
             }
-        }
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("0", style = MaterialTheme.typography.labelSmall)
-            Text("5", style = MaterialTheme.typography.labelSmall)
-            Text("10", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -898,24 +1099,30 @@ private fun SleepMetricColumn(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
         modifier = modifier,
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -1020,20 +1227,46 @@ private fun SleepChartLabels(labels: List<String>) {
 
 @Composable
 private fun InsightsCard(insights: List<StatusInsight>) {
-    ChartCard(title = stringResource(R.string.status_insights), icon = Icons.Rounded.CheckCircle) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(18.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.status_insights),
+                style = MaterialTheme.typography.titleMedium,
+            )
             insights.forEach { insight ->
-                AssistChip(
-                    onClick = {},
-                    label = { Text(stringResource(insight.stringRes)) },
-                    leadingIcon = {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.14f),
+                        contentColor = MaterialTheme.colorScheme.secondary,
+                        shape = CircleShape,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Rounded.CheckCircle,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                         )
-                    },
-                )
+                        }
+                    }
+                    Text(
+                        text = stringResource(insight.stringRes),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -1049,33 +1282,45 @@ private fun SettingsScreen(
     onExportSleepRawData: (Context, Long, Long) -> Unit,
 ) {
     val context = LocalContext.current
-    LazyColumn(
-        contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item {
-            PermissionSection()
-        }
-        item {
-            LanguageSection(settings.languageTag, onLanguageChange)
-        }
-        item {
-            ThemeSection(settings.themeMode, onThemeModeChange)
-        }
-        item {
-            ReminderSection(settings, onReminderChange)
-        }
-        item {
-            ExportsSection(
-                onExportLogs = { onExportLogs(context) },
-                onExportSleepRawData = { startMillis, endMillis ->
-                    onExportSleepRawData(context, startMillis, endMillis)
-                },
-            )
-        }
-        item {
-            AboutSection()
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            contentPadding = PaddingValues(start = 18.dp, top = 12.dp, end = 18.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 840.dp)
+                .align(Alignment.TopCenter),
+        ) {
+            item {
+                PageHeader(
+                    title = stringResource(R.string.settings_title),
+                    subtitle = stringResource(R.string.settings_subtitle),
+                    icon = Icons.Rounded.Settings,
+                )
+            }
+            item {
+                LanguageSection(settings.languageTag, onLanguageChange)
+            }
+            item {
+                ThemeSection(settings.themeMode, onThemeModeChange)
+            }
+            item {
+                ReminderSection(settings, onReminderChange)
+            }
+            item {
+                PermissionSection()
+            }
+            item {
+                ExportsSection(
+                    onExportLogs = { onExportLogs(context) },
+                    onExportSleepRawData = { startMillis, endMillis ->
+                        onExportSleepRawData(context, startMillis, endMillis)
+                    },
+                )
+            }
+            item {
+                AboutSection()
+            }
         }
     }
 }
@@ -1083,7 +1328,17 @@ private fun SettingsScreen(
 @Composable
 private fun PermissionSection() {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var refreshTick by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                refreshTick += 1
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) {
@@ -1227,17 +1482,28 @@ private fun PermissionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        AssistChip(
-            onClick = onClick,
-            label = {
-                Text(
-                    if (granted) {
-                        stringResource(R.string.permission_granted)
-                    } else {
-                        stringResource(R.string.permission_missing)
-                    },
-                )
-            },
+        Column(horizontalAlignment = Alignment.End) {
+            Icon(
+                imageVector = if (granted) Icons.Rounded.CheckCircle else Icons.Rounded.Info,
+                contentDescription = null,
+                tint = if (granted) semanticSuccess() else MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.size(20.dp),
+            )
+            Text(
+                text = if (granted) {
+                    stringResource(R.string.permission_granted)
+                } else {
+                    stringResource(R.string.permission_missing)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = if (granted) semanticSuccess() else MaterialTheme.colorScheme.tertiary,
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
         )
     }
 }
@@ -1245,16 +1511,23 @@ private fun PermissionRow(
 @Composable
 private fun LanguageSection(languageTag: String, onLanguageChange: (String) -> Unit) {
     SectionCard(title = stringResource(R.string.settings_language), icon = Icons.Rounded.Language) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip(
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectableGroup(),
+        ) {
+            ChoicePill(
                 selected = languageTag == SettingsStore.LANGUAGE_ZH,
                 onClick = { onLanguageChange(SettingsStore.LANGUAGE_ZH) },
-                label = { Text(stringResource(R.string.language_zh)) },
+                text = stringResource(R.string.language_zh),
+                modifier = Modifier.weight(1f),
             )
-            FilterChip(
+            ChoicePill(
                 selected = languageTag == SettingsStore.LANGUAGE_EN,
                 onClick = { onLanguageChange(SettingsStore.LANGUAGE_EN) },
-                label = { Text(stringResource(R.string.language_en)) },
+                text = stringResource(R.string.language_en),
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -1263,21 +1536,69 @@ private fun LanguageSection(languageTag: String, onLanguageChange: (String) -> U
 @Composable
 private fun ThemeSection(themeMode: String, onThemeModeChange: (String) -> Unit) {
     SectionCard(title = stringResource(R.string.settings_theme), icon = Icons.Rounded.Settings) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip(
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectableGroup(),
+        ) {
+            ChoicePill(
                 selected = themeMode == SettingsStore.THEME_SYSTEM,
                 onClick = { onThemeModeChange(SettingsStore.THEME_SYSTEM) },
-                label = { Text(stringResource(R.string.theme_system)) },
+                text = stringResource(R.string.theme_system),
+                modifier = Modifier.weight(1f),
             )
-            FilterChip(
+            ChoicePill(
                 selected = themeMode == SettingsStore.THEME_LIGHT,
                 onClick = { onThemeModeChange(SettingsStore.THEME_LIGHT) },
-                label = { Text(stringResource(R.string.theme_light)) },
+                text = stringResource(R.string.theme_light),
+                modifier = Modifier.weight(1f),
             )
-            FilterChip(
+            ChoicePill(
                 selected = themeMode == SettingsStore.THEME_DARK,
                 onClick = { onThemeModeChange(SettingsStore.THEME_DARK) },
-                label = { Text(stringResource(R.string.theme_dark)) },
+                text = stringResource(R.string.theme_dark),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChoicePill(
+    selected: Boolean,
+    onClick: () -> Unit,
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+        contentColor = if (selected) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        shape = CircleShape,
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = modifier
+            .heightIn(min = 46.dp)
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.RadioButton,
+            ),
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -1453,22 +1774,30 @@ private fun SectionCard(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    ElevatedCard(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(18.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Icon(icon, contentDescription = null)
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp))
+                    }
+                }
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
@@ -1492,12 +1821,60 @@ private fun ChartCard(
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleLarge,
-        fontWeight = FontWeight.SemiBold,
-    )
+private fun PageHeader(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(9.dp),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(34.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text(
+                text = stringResource(R.string.app_name).uppercase(Locale.getDefault()),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Text(text = title, style = MaterialTheme.typography.headlineLarge)
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String, supportingText: String? = null) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        supportingText?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable
@@ -1511,29 +1888,100 @@ private fun EmptyText(text: String) {
 }
 
 @Composable
-private fun RecordRow(title: String, subtitle: String) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
+private fun RecordRow(index: Int, title: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge)
-        Text(
-            subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(14.dp),
+        ) {
+            Surface(
+                color = if (index == 0) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer
+                },
+                contentColor = if (index == 0) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                shape = CircleShape,
+                modifier = Modifier.size(38.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(19.dp))
+                }
+            }
+            Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun EmptyStateCard(text: String, icon: ImageVector) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(28.dp),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                shape = CircleShape,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+                }
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
 @Composable
 private fun stressColor(band: StressBand?): Color =
     when (band) {
-        StressBand.LOW -> Color(0xFF2E7D5B)
-        StressBand.MEDIUM -> Color(0xFF9A6B00)
-        StressBand.HIGH -> Color(0xFFBA1A1A)
+        StressBand.LOW -> semanticSuccess()
+        StressBand.MEDIUM -> MaterialTheme.colorScheme.tertiary
+        StressBand.HIGH -> MaterialTheme.colorScheme.error
         null -> MaterialTheme.colorScheme.primary
+    }
+
+@Composable
+private fun semanticSuccess(): Color = MaterialTheme.colorScheme.secondary
+
+@Composable
+private fun stressBandLabel(band: StressBand?): String =
+    when (band) {
+        StressBand.LOW -> stringResource(R.string.status_band_low)
+        StressBand.MEDIUM -> stringResource(R.string.status_band_medium)
+        StressBand.HIGH -> stringResource(R.string.status_band_high)
+        null -> stringResource(R.string.status_missing)
+    }
+
+@Composable
+private fun stressBandContentColor(band: StressBand?): Color =
+    when (band) {
+        StressBand.LOW -> MaterialTheme.colorScheme.onSecondary
+        StressBand.MEDIUM -> MaterialTheme.colorScheme.onTertiary
+        StressBand.HIGH -> MaterialTheme.colorScheme.onError
+        null -> MaterialTheme.colorScheme.onPrimary
     }
 
 private fun openIntent(context: Context, intent: Intent) {

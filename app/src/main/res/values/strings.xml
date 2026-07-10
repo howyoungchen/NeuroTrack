@@ -17,14 +17,19 @@
     <string name="share_sleep_raw_data_title">导出睡眠 raw 数据</string>
 
     <string name="assessment_title">过去一周自测</string>
-    <string name="assessment_subtitle">选择最符合过去一周状态的选项。</string>
+    <string name="assessment_subtitle">一次只关注一个问题，根据过去一周的真实感受作答。</string>
     <string name="assessment_progress">%1$d/%2$d 已回答</string>
+    <string name="assessment_percent_format">%1$d%%</string>
+    <string name="assessment_question_number">第 %1$d 题</string>
+    <string name="assessment_previous">上一题</string>
+    <string name="assessment_next">下一题</string>
     <string name="assessment_submit">提交自测</string>
     <string name="assessment_result_title">本次得分 %1$d/30</string>
     <string name="assessment_feedback_low">当前压力较低，继续保持规律作息和温和活动。</string>
     <string name="assessment_feedback_medium">近期压力有一定累积，建议安排休息并观察睡眠变化。</string>
     <string name="assessment_feedback_high">压力水平偏高，请减少负荷；若症状严重或持续，请联系专业人士。</string>
     <string name="assessment_history_title">历史记录</string>
+    <string name="assessment_history_subtitle">每次记录都会参与状态趋势计算。</string>
     <string name="assessment_history_empty">还没有自测记录。</string>
     <string name="assessment_history_item">%1$s · %2$d/30</string>
     <string name="assessment_result_close">知道了</string>
@@ -49,10 +54,14 @@
     </string-array>
 
     <string name="status_title">当前状态</string>
-    <string name="status_no_data">暂无数据，请先完成自测。</string>
-    <string name="status_go_assessment">去自测</string>
+    <string name="status_subtitle">把压力与睡眠放在同一张图景里，慢慢理解自己的节奏。</string>
+    <string name="status_no_data">完成首次自测后，这里会生成你的状态概览。</string>
+    <string name="status_go_assessment">开始自测</string>
     <string name="status_stress_level">压力等级</string>
     <string name="status_stress_format">%1$.1f</string>
+    <string name="status_band_low">平稳</string>
+    <string name="status_band_medium">需关注</string>
+    <string name="status_band_high">偏高</string>
     <string name="status_stress_low">状态相对平稳，继续关注睡眠和日常节奏。</string>
     <string name="status_stress_medium">压力处于中等水平，建议主动安排恢复时间。</string>
     <string name="status_stress_high">压力偏高，请降低负荷；如有明显不适请及时就医。</string>
@@ -70,6 +79,10 @@
     <string name="status_sleep_month">近一个月睡眠状态</string>
     <string name="status_sleep_window">入睡与起床时间</string>
     <string name="status_insights">趋势洞察</string>
+    <string name="status_sleep_section">昨夜概览</string>
+    <string name="status_sleep_section_subtitle">最近一次可用的睡眠记录。</string>
+    <string name="status_trends_section">趋势与节奏</string>
+    <string name="status_trends_section_subtitle">用更长时间范围识别变化，而不是被单日波动影响。</string>
     <string name="status_insight_no_sleep">睡眠数据不足，授予使用情况访问权限后会自动生成。</string>
     <string name="status_insight_later">近 7 天入睡时间呈变晚趋势。</string>
     <string name="status_insight_irregular">入睡时间波动较大，作息不够稳定。</string>
@@ -83,6 +96,7 @@
     <string name="chart_empty">暂无可绘制数据</string>
 
     <string name="settings_title">设置</string>
+    <string name="settings_subtitle">按你的习惯调整体验，并管理全部本地数据权限。</string>
     <string name="settings_permissions">权限获取</string>
     <string name="settings_about">关于</string>
     <string name="settings_language">语言</string>
@@ -112,8 +126,8 @@
     <string name="language_zh">中文</string>
     <string name="language_en">English</string>
     <string name="theme_system">根据系统</string>
-    <string name="theme_light">白</string>
-    <string name="theme_dark">黑</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
     <string name="reminder_day">星期</string>
     <string name="reminder_hour">时间</string>
     <string name="reminder_rule">仅当最近 7 天没有任何自测记录时发送通知。</string>

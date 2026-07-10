@@ -17,14 +17,19 @@
     <string name="share_sleep_raw_data_title">Export sleep raw data</string>
 
     <string name="assessment_title">Past-week assessment</string>
-    <string name="assessment_subtitle">Choose the option that best matches the past week.</string>
+    <string name="assessment_subtitle">Focus on one question at a time and answer for how the past week truly felt.</string>
     <string name="assessment_progress">%1$d/%2$d answered</string>
-    <string name="assessment_submit">Submit assessment</string>
+    <string name="assessment_percent_format">%1$d%%</string>
+    <string name="assessment_question_number">Question %1$d</string>
+    <string name="assessment_previous">Back</string>
+    <string name="assessment_next">Next</string>
+    <string name="assessment_submit">Submit</string>
     <string name="assessment_result_title">Score %1$d/30</string>
     <string name="assessment_feedback_low">Current pressure is low. Keep a steady routine and gentle activity.</string>
     <string name="assessment_feedback_medium">Pressure has accumulated recently. Consider rest and watch sleep changes.</string>
     <string name="assessment_feedback_high">Pressure is elevated. Reduce load; seek professional help if symptoms are severe or persistent.</string>
     <string name="assessment_history_title">History</string>
+    <string name="assessment_history_subtitle">Every check-in contributes to your status trend.</string>
     <string name="assessment_history_empty">No assessment records yet.</string>
     <string name="assessment_history_item">%1$s · %2$d/30</string>
     <string name="assessment_result_close">OK</string>
@@ -49,10 +54,14 @@
     </string-array>
 
     <string name="status_title">Current status</string>
-    <string name="status_no_data">No data yet. Please complete an assessment first.</string>
+    <string name="status_subtitle">See pressure and sleep together, and gradually understand your rhythm.</string>
+    <string name="status_no_data">Complete your first check-in to create a personal status overview.</string>
     <string name="status_go_assessment">Start assessment</string>
     <string name="status_stress_level">Pressure level</string>
     <string name="status_stress_format">%1$.1f</string>
+    <string name="status_band_low">Steady</string>
+    <string name="status_band_medium">Watch</string>
+    <string name="status_band_high">Elevated</string>
     <string name="status_stress_low">Status looks relatively steady. Keep tracking sleep and routine.</string>
     <string name="status_stress_medium">Pressure is moderate. Schedule intentional recovery time.</string>
     <string name="status_stress_high">Pressure is high. Reduce load; seek care if discomfort is significant.</string>
@@ -70,6 +79,10 @@
     <string name="status_sleep_month">Past month sleep status</string>
     <string name="status_sleep_window">Sleep and wake times</string>
     <string name="status_insights">Trend insights</string>
+    <string name="status_sleep_section">Last night</string>
+    <string name="status_sleep_section_subtitle">Your most recent available sleep record.</string>
+    <string name="status_trends_section">Trends and rhythm</string>
+    <string name="status_trends_section_subtitle">Use a longer view to spot change without overreacting to a single day.</string>
     <string name="status_insight_no_sleep">Sleep data is insufficient. Grant usage access to generate records automatically.</string>
     <string name="status_insight_later">Bedtime is trending later over the past 7 days.</string>
     <string name="status_insight_irregular">Bedtime varies widely, suggesting an unstable routine.</string>
@@ -83,6 +96,7 @@
     <string name="chart_empty">No chartable data</string>
 
     <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">Tune the experience to your routine and manage every local data permission.</string>
     <string name="settings_permissions">Permissions</string>
     <string name="settings_about">About</string>
     <string name="settings_language">Language</string>

@@ -1,9 +1,10 @@
 package com.example.neurotrack.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,51 +12,83 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Teal80,
-    secondary = BlueGrey80,
-    tertiary = Sky80,
-    background = Color(0xFF101417),
-    surface = Color(0xFF101417),
-    surfaceContainerLow = Color(0xFF171C1F),
-    surfaceContainer = Color(0xFF1D2326),
-    surfaceVariant = Color(0xFF3F484B),
+    primary = INDIGO_80,
+    onPrimary = INDIGO_20,
+    primaryContainer = INDIGO_30,
+    onPrimaryContainer = INDIGO_90,
+    secondary = MINT_80,
+    onSecondary = Color(0xFF00382D),
+    secondaryContainer = Color(0xFF124F41),
+    onSecondaryContainer = MINT_90,
+    tertiary = AMBER_80,
+    onTertiary = Color(0xFF4B3700),
+    tertiaryContainer = Color(0xFF654C00),
+    onTertiaryContainer = AMBER_90,
+    background = NIGHT,
+    onBackground = Color(0xFFE5E1EC),
+    surface = NIGHT,
+    onSurface = Color(0xFFE5E1EC),
+    surfaceContainerLowest = Color(0xFF0B0C12),
+    surfaceContainerLow = NIGHT_RAISED,
+    surfaceContainer = NIGHT_MUTED,
+    surfaceContainerHigh = Color(0xFF2A2B37),
+    surfaceVariant = Color(0xFF454552),
+    onSurfaceVariant = Color(0xFFC7C5D0),
+    outline = Color(0xFF91909B),
+    outlineVariant = Color(0xFF454550),
+    error = DANGER_DARK,
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Teal40,
+    primary = INDIGO_40,
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD6F3EC),
-    onPrimaryContainer = Color(0xFF00201A),
-    secondary = BlueGrey40,
+    primaryContainer = INDIGO_90,
+    onPrimaryContainer = INDIGO_10,
+    secondary = MINT_40,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDCE8EC),
-    onSecondaryContainer = Color(0xFF071F25),
-    tertiary = Sky40,
+    secondaryContainer = MINT_90,
+    onSecondaryContainer = Color(0xFF002018),
+    tertiary = AMBER_40,
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD6E3FF),
-    onTertiaryContainer = Color(0xFF001B3F),
-    background = Color(0xFFFAFCFF),
-    onBackground = Color(0xFF191C1F),
-    surface = Color(0xFFFAFCFF),
-    onSurface = Color(0xFF191C1F),
-    surfaceContainerLow = Color(0xFFFFFFFF),
-    surfaceContainer = Color(0xFFF2F6F8),
-    surfaceVariant = Color(0xFFDCE4E7),
-    onSurfaceVariant = Color(0xFF40484B),
-    outline = Color(0xFF6F797C),
-    outlineVariant = Color(0xFFC0C8CB),
-    error = Color(0xFFBA1A1A),
+    tertiaryContainer = AMBER_90,
+    onTertiaryContainer = Color(0xFF241A00),
+    background = PAPER,
+    onBackground = INK,
+    surface = PAPER,
+    onSurface = INK,
+    surfaceContainerLowest = PAPER_RAISED,
+    surfaceContainerLow = PAPER_RAISED,
+    surfaceContainer = PAPER_MUTED,
+    surfaceContainerHigh = Color(0xFFE9E9F2),
+    surfaceVariant = Color(0xFFE4E3EC),
+    onSurfaceVariant = INK_MUTED,
+    outline = Color(0xFF777783),
+    outlineVariant = Color(0xFFC9C7D1),
+    error = DANGER_LIGHT,
     onError = Color.White,
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+)
+
+private val appShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
 @Composable
 fun NeuroTrackTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
@@ -70,6 +103,7 @@ fun NeuroTrackTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        shapes = appShapes,
+        content = content,
     )
 }
