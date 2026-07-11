@@ -3,7 +3,7 @@
 <div align="center">
   <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" width="96" alt="NeuroTrack app icon">
   <p><strong>Notice the change. Give yourself room to recover.</strong></p>
-  <p>A quiet, local-first Android app I built to help me notice pressure and sleep changes during recovery.</p>
+  <p>A small Android app I wrote for myself to notice when pressure and sleep start getting worse during recovery.</p>
   <p><a href="README.zh-CN.md">简体中文</a></p>
   <p>
     <a href="https://github.com/howyoungchen/NeuroTrack/releases/latest"><img src="https://img.shields.io/github/v/release/howyoungchen/NeuroTrack?style=flat-square&color=4B5290" alt="Latest release"></a>
@@ -22,7 +22,7 @@
 
 ## Real app screens
 
-These are real NeuroTrack v1.4 screens captured from an Android emulator with fictional assessment data. They are not design mockups and contain no personal information.
+This is v1.4 running in an Android emulator. I filled in some made-up data so you can see what the app actually looks like.
 
 <table>
   <tr>
@@ -33,27 +33,27 @@ These are real NeuroTrack v1.4 screens captured from an Android emulator with fi
   <tr>
     <td align="center"><strong>Status at a glance</strong><br><sub>Pressure, sleep, and trends together</sub></td>
     <td align="center"><strong>One question at a time</strong><br><sub>A focused past-week check-in</sub></td>
-    <td align="center"><strong>Settings and permissions</strong><br><sub>Every local-data permission stays visible</sub></td>
+    <td align="center"><strong>Settings and permissions</strong><br><sub>See what each permission is for</sub></td>
   </tr>
 </table>
 
 ## Why I built it
 
-If you have lived through anxiety or something similar, you may know the uneasy part that comes after the worst is over: feeling better does not always mean feeling safe from sliding back.
+If you have lived through anxiety or something similar, you probably know that getting past the worst part does not make the uncertainty disappear.
 
-For me, a difficult period rarely arrives without warning. The signs tend to show up earlier — several poor nights of sleep, unexplained tension, rumination returning, or the rhythm of ordinary life slowly coming apart. The trouble is that these signals are hardest to notice while I am inside them. By the time I can name what is happening, the pressure may have been building for a while.
+For me, a bad stretch rarely starts overnight. It usually begins with ordinary things: several poor nights of sleep, unexplained tension, or the same thoughts going around again. Those signs are surprisingly hard to see from the inside. By the time I notice, the pressure has often been building for a while.
 
-I wanted a tool that could hold onto those small changes for me:
+What I wanted was simple:
 
-- check in on how the past week actually felt;
-- put subjective experience and sleep changes in the same picture;
-- speak up only when the pattern is genuinely worth my attention.
+- spend a minute or two recording how the week felt;
+- put the check-in and sleep changes next to each other;
+- alert me when the score really crosses the line, and leave me alone otherwise.
 
-I could not find one that felt right, so I built NeuroTrack.
+I could not find the right app, so I wrote one.
 
-One principle has guided the whole project: **the app itself must never become another source of pressure.** It does not demand a daily streak, hold me to a score, or use anxiety to pull me back in. It should stay quietly on my phone and offer a little evidence when I need to understand my state.
+There is one rule I have kept from the start: **the app itself must not become another source of pressure.** I do not need another daily streak or another notification telling me I have fallen behind. Most of the time, NeuroTrack should simply stay quiet.
 
-## It may be useful to you if
+## Who it may be useful for
 
 - You are past the most difficult stage but still want to notice changes earlier.
 - You often realize pressure has accumulated only after several bad nights or a clear drop in energy.
@@ -61,9 +61,9 @@ One principle has guided the whole project: **the app itself must never become a
 - You do not want sensitive assessment, sleep, or wellbeing data tied to a cloud account.
 - You want reminders to be restrained instead of relentless.
 
-NeuroTrack will not decide whether you are relapsing, and it will not tell you what treatment you need. Its purpose is simpler: **to put changes that are easy to miss somewhere you can see them.**
+NeuroTrack does not decide whether you are relapsing and it does not offer treatment advice. It collects scattered check-ins and sleep changes in one place, so there is something concrete to look back on.
 
-## What it helps me observe
+## What it does today
 
 | What I want to know | What NeuroTrack does |
 | --- | --- |
@@ -75,7 +75,7 @@ NeuroTrack will not decide whether you are relapsing, and it will not tell you w
 
 The app supports English and Chinese, plus system, light, and dark themes.
 
-## What using it looks like
+## Using it
 
 ```mermaid
 flowchart LR
@@ -89,9 +89,9 @@ flowchart LR
 1. Install the app and complete your first check-in under **Assessment**.
 2. If you want sleep observation, grant Usage Access in **Settings**. Location is an optional supporting signal.
 3. Open **Status** to see pressure level, recent sleep, and longer-term trends.
-4. Then go live your life. The app can speak when something deserves attention.
+4. Then get on with your life. The app can speak when the score crosses the threshold.
 
-This is not something I want to “maintain” every day. The less effort it takes, the more likely it is to remain genuinely useful.
+I do not want another app that needs daily maintenance. If it takes less effort, I am more likely to keep using it.
 
 ## What I deliberately left out
 
@@ -103,7 +103,7 @@ This is not something I want to “maintain” every day. The less effort it tak
 
 ## Privacy and permissions
 
-This information is sensitive, so I designed NeuroTrack to be local-first:
+This is private information, so I try to keep it on the phone:
 
 - Assessments, sleep records, screen events, and runtime logs are stored in the on-device database.
 - Sleep observation uses system-provided screen-interaction timestamps. It does not read screen content, messages, or content from other apps.
@@ -111,7 +111,7 @@ This information is sensitive, so I designed NeuroTrack to be local-first:
 - NeuroTrack itself does not upload records. The only in-app path for sharing selected data is a deliberate export through Android's system share sheet; Android system backups still follow your device settings.
 - The app requests no internet permission and includes no analytics, advertising SDK, or cloud account.
 
-Android may ask for these permissions:
+When Android asks for a permission, the app explains what it is for:
 
 | Permission | Why it is used | Required? |
 | --- | --- | --- |
@@ -131,9 +131,9 @@ NeuroTrack supports Android 8.0 (API 26) and above. APKs on GitHub Releases are 
 
 ## One important note
 
-NeuroTrack is a tool I use to observe changes in myself. **It is not medical software and it cannot replace a doctor, therapist, or emergency support.**
+I wrote NeuroTrack to give myself one more way to notice changes. **It is not medical software and it cannot replace a doctor, therapist, or emergency support.**
 
-If your symptoms are severe, keep getting worse, or include thoughts of harming yourself, please do not wait for an app to alert you. Contact a professional, someone you trust, or your local emergency service. Taking care of yourself matters more than completing any record.
+If symptoms are severe, keep getting worse, or include thoughts of self-harm, do not wait for an app to alert you. Contact a professional, someone you trust, or your local emergency service.
 
 ## Build from source
 
@@ -153,7 +153,7 @@ Before opening a PR, please run:
 
 ## Thank you — and come join us
 
-Thank you to everyone who has used the app, shared an experience, suggested an improvement, or simply read this far.
+Thanks for reading this far, and thanks to everyone who has tried the app or sent an idea.
 
 If you care about recovery, privacy-friendly tools, or Android development, you are welcome here. You can [open an issue](https://github.com/howyoungchen/NeuroTrack/issues), improve the wording, refine sleep inference, add tests, or help with translation.
 
