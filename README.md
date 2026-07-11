@@ -12,7 +12,7 @@
   </p>
 </div>
 
-![NeuroTrack brings pressure trends, sleep rhythm, and local-first privacy into one calm view](docs/images/neurotrack-readme-hero.svg)
+![NeuroTrack brings pressure trends, sleep rhythm, and local-first privacy into one calm view](docs/images/neurotrack-readme-hero-en.svg)
 
 <div align="center">
   <strong><a href="https://github.com/howyoungchen/NeuroTrack/releases/latest">Download the latest release</a></strong>

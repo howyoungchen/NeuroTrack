@@ -12,7 +12,7 @@
   </p>
 </div>
 
-![NeuroTrack：观察压力趋势、睡眠节奏，并把数据留在本机](docs/images/neurotrack-readme-hero.svg)
+![NeuroTrack：观察压力趋势、睡眠节奏，并把数据留在本机](docs/images/neurotrack-readme-hero-zh.svg)
 
 <div align="center">
   <strong><a href="https://github.com/howyoungchen/NeuroTrack/releases/latest">下载最新版本</a></strong>
