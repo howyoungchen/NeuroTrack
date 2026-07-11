@@ -58,9 +58,9 @@
       <text x="24" y="36" fill="#5D5E6B" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15">近一个月压力变化</text>
       <text x="368" y="36" text-anchor="end" fill="#8A8B98" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="14">30 天</text>
       <path d="M24 78H368M24 116H368M24 154H368" fill="none" stroke="#E7E7F0" stroke-width="1.5"/>
-      <path d="M24 154C70 145 91 146 130 126C170 105 194 116 230 91C266 66 306 77 368 52V168H24Z" fill="#E0E0FF" opacity="0.72"/>
-      <path d="M24 154C70 145 91 146 130 126C170 105 194 116 230 91C266 66 306 77 368 52" fill="none" stroke="#4B5290" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="368" cy="52" r="8" fill="#4B5290"/>
+      <path d="M24 140C42 136 54 116 72 118C91 120 96 137 114 135C132 133 140 101 158 98C177 95 181 119 200 116C219 113 226 84 244 82C263 80 270 103 288 100C307 97 316 73 332 72C347 71 356 89 368 86V168H24Z" fill="#E0E0FF" opacity="0.72"/>
+      <path d="M24 140C42 136 54 116 72 118C91 120 96 137 114 135C132 133 140 101 158 98C177 95 181 119 200 116C219 113 226 84 244 82C263 80 270 103 288 100C307 97 316 73 332 72C347 71 356 89 368 86" fill="none" stroke="#4B5290" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="368" cy="86" r="8" fill="#4B5290"/>
     </g>
 
     <g transform="translate(28 240)">
