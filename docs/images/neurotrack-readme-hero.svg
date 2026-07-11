@@ -1,74 +1,84 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
   <title id="title">NeuroTrack / 心迹</title>
-  <desc id="desc">A calm illustration of pressure trends, sleep rhythm, and local-first privacy.</desc>
+  <desc id="desc">压力趋势、睡眠节奏与本地数据保护</desc>
+
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#F8F8FC"/>
-      <stop offset="0.55" stop-color="#F0F0F7"/>
+      <stop offset="0.58" stop-color="#F0F0F7"/>
       <stop offset="1" stop-color="#E0E0FF"/>
     </linearGradient>
-    <linearGradient id="heart" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#2F806D"/>
       <stop offset="1" stop-color="#4B5290"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <filter id="panel-shadow" x="-20%" y="-20%" width="140%" height="150%">
       <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#22275B" flood-opacity="0.12"/>
     </filter>
   </defs>
 
   <rect width="1200" height="520" rx="40" fill="url(#background)"/>
-  <circle cx="1100" cy="70" r="150" fill="#B7F2DB" opacity="0.45"/>
-  <circle cx="90" cy="470" r="145" fill="#FFE9AE" opacity="0.38"/>
+  <circle cx="1102" cy="68" r="150" fill="#B7F2DB" opacity="0.42"/>
+  <circle cx="48" cy="548" r="125" fill="#FFE9AE" opacity="0.36"/>
 
-  <g transform="translate(76 74)">
-    <text x="0" y="55" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="700">NeuroTrack / 心迹</text>
-    <text x="2" y="116" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="31" font-weight="600">看见变化，早点照顾自己</text>
-    <text x="2" y="158" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="22">Notice the change. Give yourself room to recover.</text>
+  <!-- Left: one shared 516 px content grid. -->
+  <g transform="translate(76 0)">
+    <text x="0" y="132" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="700">NeuroTrack / 心迹</text>
+    <text x="0" y="195" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="31" font-weight="600">看见变化，早点照顾自己</text>
+    <text x="0" y="237" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="22">Notice the change. Give yourself room to recover.</text>
 
-    <g transform="translate(0 230)">
-      <rect width="152" height="48" rx="24" fill="#FFFFFF" opacity="0.88"/>
-      <circle cx="25" cy="24" r="8" fill="#4B5290"/>
-      <text x="43" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">压力趋势</text>
-
-      <g transform="translate(168 0)">
-        <rect width="152" height="48" rx="24" fill="#FFFFFF" opacity="0.88"/>
-        <path d="M18 29a10 10 0 0 0 15-13 10 10 0 1 1-15 13Z" fill="#916B00"/>
-        <text x="43" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">睡眠节奏</text>
+    <g transform="translate(0 306)">
+      <g>
+        <rect width="164" height="48" rx="24" fill="#FFFFFF" opacity="0.9"/>
+        <circle cx="25" cy="24" r="8" fill="#4B5290"/>
+        <text x="46" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">压力趋势</text>
       </g>
 
-      <g transform="translate(336 0)">
-        <rect width="164" height="48" rx="24" fill="#FFFFFF" opacity="0.88"/>
-        <path d="M25 14l9 4v7c0 7-4 11-9 14-5-3-9-7-9-14v-7l9-4Z" fill="#2F806D"/>
-        <path d="M21 25l3 3 6-7" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="45" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">本地优先</text>
+      <g transform="translate(176 0)">
+        <rect width="164" height="48" rx="24" fill="#FFFFFF" opacity="0.9"/>
+        <path d="M9.37 5.51A7.35 7.35 0 0 0 9 7.8a7.2 7.2 0 0 0 7.2 7.2 7.35 7.35 0 0 0 2.29-.37A7.5 7.5 0 1 1 9.37 5.51Z" fill="#916B00" transform="translate(7 3) scale(1.35)"/>
+        <text x="46" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">睡眠节奏</text>
+      </g>
+
+      <g transform="translate(352 0)">
+        <rect width="164" height="48" rx="24" fill="#FFFFFF" opacity="0.9"/>
+        <path d="M25 13l10 4v8c0 7-4 12-10 15-6-3-10-8-10-15v-8l10-4Z" fill="#2F806D"/>
+        <path d="M20.5 25.5l3.2 3.2 6.8-8" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="46" y="31" fill="#353B73" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">本地优先</text>
       </g>
     </g>
+
+    <text x="0" y="404" fill="#5D5E6B" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18">不注册 · 不上传 · 不催打卡</text>
   </g>
 
-  <g transform="translate(698 55)" filter="url(#shadow)">
-    <rect width="420" height="410" rx="34" fill="#FFFFFF"/>
+  <!-- Right: 28 px outer padding, 16 px internal gaps, equal-width lower cards. -->
+  <g transform="translate(680 48)" filter="url(#panel-shadow)">
+    <rect width="448" height="424" rx="36" fill="#FFFFFF"/>
 
-    <g transform="translate(32 30)">
-      <rect width="356" height="176" rx="24" fill="#F8F8FC"/>
-      <text x="24" y="34" fill="#5D5E6B" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15">近一个月压力变化</text>
-      <path d="M24 126C65 115 83 120 119 99s66-9 95-30 61-13 118-39" fill="none" stroke="#4B5290" stroke-width="7" stroke-linecap="round"/>
-      <path d="M24 126C65 115 83 120 119 99s66-9 95-30 61-13 118-39v105H24Z" fill="#E0E0FF" opacity="0.65"/>
-      <circle cx="332" cy="30" r="9" fill="#4B5290"/>
+    <g transform="translate(28 28)">
+      <rect width="392" height="196" rx="24" fill="#F8F8FC"/>
+      <text x="24" y="36" fill="#5D5E6B" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15">近一个月压力变化</text>
+      <text x="368" y="36" text-anchor="end" fill="#8A8B98" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="14">30 天</text>
+
+      <path d="M24 78H368M24 116H368M24 154H368" fill="none" stroke="#E7E7F0" stroke-width="1.5"/>
+      <path d="M24 154C70 145 91 146 130 126C170 105 194 116 230 91C266 66 306 77 368 52V168H24Z" fill="#E0E0FF" opacity="0.72"/>
+      <path d="M24 154C70 145 91 146 130 126C170 105 194 116 230 91C266 66 306 77 368 52" fill="none" stroke="#4B5290" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="368" cy="52" r="8" fill="#4B5290"/>
     </g>
 
-    <g transform="translate(32 226)">
-      <rect width="170" height="152" rx="24" fill="#EAF7F3"/>
-      <path d="M46 66a34 34 0 0 0 49-44 34 34 0 1 1-49 44Z" fill="#2F806D"/>
-      <text x="24" y="116" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18" font-weight="600">睡眠节奏</text>
-      <text x="24" y="138" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="14">Sleep rhythm</text>
+    <g transform="translate(28 240)">
+      <rect width="188" height="156" rx="24" fill="#EAF7F3"/>
+      <path d="M9.37 5.51A7.35 7.35 0 0 0 9 7.8a7.2 7.2 0 0 0 7.2 7.2 7.35 7.35 0 0 0 2.29-.37A7.5 7.5 0 1 1 9.37 5.51Z" fill="#2F806D" transform="translate(50 7) scale(4.4)"/>
+      <text x="94" y="121" text-anchor="middle" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18" font-weight="600">睡眠节奏</text>
+      <text x="94" y="144" text-anchor="middle" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="14">Sleep rhythm</text>
     </g>
 
-    <g transform="translate(218 226)">
-      <rect width="170" height="152" rx="24" fill="#FFF6DE"/>
-      <path d="M85 22l29 12v23c0 23-13 37-29 47-16-10-29-24-29-47V34l29-12Z" fill="url(#heart)"/>
-      <path d="M72 60l10 10 20-25" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-      <text x="24" y="116" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18" font-weight="600">数据留在本机</text>
-      <text x="24" y="138" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="14">Local-first</text>
+    <g transform="translate(232 240)">
+      <rect width="188" height="156" rx="24" fill="#FFF6DE"/>
+      <path d="M94 24l25 11v20c0 18-11 30-25 38-14-8-25-20-25-38V35l25-11Z" fill="url(#shield)"/>
+      <path d="M82 57l8.5 8.5 17.5-21" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="94" y="121" text-anchor="middle" fill="#1A1B25" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18" font-weight="600">数据留在本机</text>
+      <text x="94" y="144" text-anchor="middle" fill="#5D5E6B" font-family="Segoe UI, sans-serif" font-size="14">Local-first</text>
     </g>
   </g>
 </svg>
