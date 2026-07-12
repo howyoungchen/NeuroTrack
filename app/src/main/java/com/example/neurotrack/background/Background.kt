@@ -19,7 +19,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -136,23 +138,31 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
         val settings = SettingsStore(context)
-        NeuroWorkScheduler.scheduleDailySleepAnalysis(context)
+        NeuroWorkScheduler.schedulePeriodicSleepAnalysis(context)
         NeuroWorkScheduler.scheduleAssessmentReminder(context, settings.settings.value)
     }
 }
 
 object NeuroWorkScheduler {
-    private const val DAILY_SLEEP_WORK = "daily_sleep_analysis"
+    private const val PERIODIC_SLEEP_WORK = "daily_sleep_analysis"
+    private const val REFRESH_SLEEP_WORK = "refresh_sleep_analysis"
     private const val ASSESSMENT_REMINDER_WORK = "weekly_assessment_reminder"
 
-    fun scheduleDailySleepAnalysis(context: Context) {
-        val request = PeriodicWorkRequestBuilder<SleepAnalysisWorker>(1, TimeUnit.DAYS)
-            .setInitialDelay(delayUntilNextDailyHour(12), TimeUnit.MILLISECONDS)
+    fun schedulePeriodicSleepAnalysis(context: Context) {
+        val request = PeriodicWorkRequestBuilder<SleepAnalysisWorker>(3, TimeUnit.HOURS)
             .build()
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            DAILY_SLEEP_WORK,
+            PERIODIC_SLEEP_WORK,
             ExistingPeriodicWorkPolicy.UPDATE,
             request,
+        )
+    }
+
+    fun refreshSleepAnalysis(context: Context) {
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            REFRESH_SLEEP_WORK,
+            ExistingWorkPolicy.KEEP,
+            OneTimeWorkRequestBuilder<SleepAnalysisWorker>().build(),
         )
     }
 
@@ -172,13 +182,6 @@ object NeuroWorkScheduler {
             ExistingPeriodicWorkPolicy.UPDATE,
             request,
         )
-    }
-
-    private fun delayUntilNextDailyHour(hour: Int): Long {
-        val now = LocalDateTime.now()
-        var next = now.withHour(hour).withMinute(0).withSecond(0).withNano(0)
-        if (!next.isAfter(now)) next = next.plusDays(1)
-        return Duration.between(now, next).toMillis().coerceAtLeast(0)
     }
 
     private fun delayUntilNextWeeklyTime(dayOfWeek: Int, hour: Int, minute: Int): Long {
@@ -202,7 +205,7 @@ class SleepAnalysisWorker(
     override suspend fun doWork(): Result {
         val repository = repository(applicationContext)
         return runCatching {
-            val analysis = SleepAnalysisRunner.android(applicationContext).runForTargetDate()
+            val analysis = SleepAnalysisRunner.android(applicationContext).runForCurrentTime()
             logUsageObservationStatus(repository, analysis.usageStatus)
             repository.saveSleepRecord(analysis.record)
             repository.pruneLogs(TimeUnit.DAYS.toMillis(30))

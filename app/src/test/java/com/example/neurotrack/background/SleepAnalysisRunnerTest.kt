@@ -16,6 +16,38 @@ class SleepAnalysisRunnerTest {
     private val targetDate = LocalDate.of(2026, 7, 4)
 
     @Test
+    fun runForCurrentTime_analyzesTodayOnlyThroughNow() {
+        val nowMillis = millis("2026-07-04", "08:05")
+        var requestedStart = 0L
+        var requestedEnd = 0L
+        val runner = SleepAnalysisRunner(
+            usageObservationSource = UsageObservationSource { startMillis, endMillis ->
+                requestedStart = startMillis
+                requestedEnd = endMillis
+                UsageObservationRead(
+                    observations = SleepObservations(
+                        screenEvents = listOf(
+                            event("2026-07-03", "23:30", ScreenEventType.SCREEN_OFF),
+                            event("2026-07-04", "07:45", ScreenEventType.SCREEN_ON),
+                        ),
+                    ),
+                    status = UsageObservationStatus.AVAILABLE,
+                )
+            },
+            locationSignalSource = LocationSignalSource { _, _, _ -> emptyList() },
+            nowMillis = { nowMillis },
+            zoneIdProvider = { zoneId },
+        )
+
+        val result = runner.runForCurrentTime()
+
+        assertEquals(targetDate, result.targetDate)
+        assertEquals(millis("2026-07-03", "18:00"), requestedStart)
+        assertEquals(nowMillis, requestedEnd)
+        assertEquals(millis("2026-07-04", "07:45"), result.record.sleepEndMillis)
+    }
+
+    @Test
     fun runForTargetDate_collectsObservationsAndAnalyzesSleep() {
         val runner = SleepAnalysisRunner(
             usageObservationSource = UsageObservationSource { _, _ ->

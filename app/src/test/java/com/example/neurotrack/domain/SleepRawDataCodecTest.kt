@@ -12,19 +12,19 @@ class SleepRawDataCodecTest {
     private val zoneId = ZoneId.of("Asia/Shanghai")
 
     @Test
-    fun inferTargetDateForRange_whenRangeEndsBeforeNoonUsesEndDate() {
+    fun inferTargetDateForRange_whenRangeEndsAtCycleBoundaryUsesEndDate() {
         assertEquals(
             LocalDate.of(2026, 7, 4),
             SleepRawDataCodec.inferTargetDateForRange(
-                startMillis = millis("2026-07-03T20:00:00"),
-                endMillis = millis("2026-07-04T12:00:00"),
+                startMillis = millis("2026-07-03T18:00:00"),
+                endMillis = millis("2026-07-04T18:00:00"),
                 zoneId = zoneId,
             ),
         )
     }
 
     @Test
-    fun inferTargetDateForRange_whenRangeEndsAfterNoonUsesNextDateFromStart() {
+    fun inferTargetDateForRange_whenRangeIsAfterCycleBoundaryUsesNextDateFromStart() {
         assertEquals(
             LocalDate.of(2026, 7, 4),
             SleepRawDataCodec.inferTargetDateForRange(

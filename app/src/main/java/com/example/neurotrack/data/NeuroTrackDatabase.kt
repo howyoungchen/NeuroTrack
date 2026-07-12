@@ -11,6 +11,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.Transaction
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.neurotrack.domain.SleepRecord
@@ -74,6 +75,17 @@ interface SleepRecordDao {
 
     @Query("SELECT * FROM sleep_records WHERE dateEpochDay >= :sinceEpochDay ORDER BY dateEpochDay DESC")
     suspend fun getSince(sinceEpochDay: Long): List<SleepRecordEntity>
+
+    @Query("SELECT * FROM sleep_records WHERE dateEpochDay = :dateEpochDay LIMIT 1")
+    suspend fun getByDate(dateEpochDay: Long): SleepRecordEntity?
+
+    @Transaction
+    suspend fun insertUnlessMissingDowngrade(record: SleepRecordEntity): Boolean {
+        val existing = getByDate(record.dateEpochDay)
+        if (record.isMissing && existing?.isMissing == false) return false
+        insertOrReplace(record)
+        return true
+    }
 }
 
 @Dao
@@ -148,7 +160,15 @@ class NeuroRepository(
     }
 
     suspend fun saveSleepRecord(record: SleepRecord) {
-        database.sleepRecordDao().insertOrReplace(record.toEntity())
+        val saved = database.sleepRecordDao().insertUnlessMissingDowngrade(record.toEntity())
+        if (!saved) {
+            log(
+                "INFO",
+                "Sleep",
+                "Kept usable sleep record date=${record.dateEpochDay} instead of replacing it with missing data",
+            )
+            return
+        }
         log(
             "INFO",
             "Sleep",

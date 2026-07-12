@@ -15,7 +15,7 @@ class StatusDisplayModelTest {
     private val today = LocalDate.of(2026, 7, 4)
 
     @Test
-    fun buildStatusDisplayModel_usesMostRecentUsableSleepRecordForYesterdayCard() {
+    fun buildStatusDisplayModel_usesMostRecentUsableSleepRecordForLatestCard() {
         val result = buildStatusDisplayModel(
             assessments = emptyList(),
             sleepRecords = listOf(
@@ -26,9 +26,9 @@ class StatusDisplayModelTest {
             zoneId = zoneId,
         )
 
-        assertEquals(7.5, result.yesterdaySleep.durationHours ?: -1.0, 0.0001)
-        assertEquals("23:00", result.yesterdaySleep.bedtimeText)
-        assertEquals("06:30", result.yesterdaySleep.wakeTimeText)
+        assertEquals(7.5, result.latestSleep.durationHours ?: -1.0, 0.0001)
+        assertEquals("23:00", result.latestSleep.bedtimeText)
+        assertEquals("06:30", result.latestSleep.wakeTimeText)
     }
 
     @Test
@@ -44,8 +44,8 @@ class StatusDisplayModelTest {
             zoneId = zoneId,
         )
 
-        assertFalse(result.yesterdaySleep.hasData)
-        assertNull(result.yesterdaySleep.durationHours)
+        assertFalse(result.latestSleep.hasData)
+        assertNull(result.latestSleep.durationHours)
     }
 
     @Test

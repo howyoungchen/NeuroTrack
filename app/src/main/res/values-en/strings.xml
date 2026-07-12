@@ -71,7 +71,7 @@
     <string name="status_pressure_scale">Pressure level 0–10</string>
     <string name="status_pressure_scale_hint">Low · Medium · High</string>
     <string name="status_pressure_month">Past month pressure</string>
-    <string name="status_sleep_yesterday">Yesterday sleep status</string>
+    <string name="status_sleep_latest">Most recent sleep</string>
     <string name="status_sleep_duration">Duration</string>
     <string name="status_bedtime">Bedtime</string>
     <string name="status_wake_time">Wake time</string>
@@ -79,7 +79,7 @@
     <string name="status_sleep_month">Past month sleep status</string>
     <string name="status_sleep_window">Sleep and wake times</string>
     <string name="status_insights">Trend insights</string>
-    <string name="status_sleep_section">Last night</string>
+    <string name="status_sleep_section">Recent sleep</string>
     <string name="status_sleep_section_subtitle">Your most recent available sleep record.</string>
     <string name="status_trends_section">Trends and rhythm</string>
     <string name="status_trends_section_subtitle">Use a longer view to spot change without overreacting to a single day.</string>

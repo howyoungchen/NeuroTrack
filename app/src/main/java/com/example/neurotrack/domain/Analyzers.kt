@@ -10,11 +10,10 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 object SleepRules {
-    const val NIGHT_WINDOW_START_HOUR = 20
-    const val NIGHT_WINDOW_END_HOUR = 12
+    const val SLEEP_WINDOW_BOUNDARY_HOUR = 18
     const val CORE_SLEEP_START_HOUR = 0
-    const val CORE_SLEEP_END_HOUR = 8
-    const val LATEST_SLEEP_START_HOUR = 5
+    const val CORE_SLEEP_END_HOUR = 10
+    const val LATEST_SLEEP_START_HOUR = 8
     const val MORNING_WAKE_HOUR = 5
     const val MIN_SLEEP_MINUTES = 120
     const val MAX_SLEEP_MINUTES = 13 * 60
@@ -24,7 +23,6 @@ object SleepRules {
     const val MORNING_LONG_SCREEN_ON_WAKE_MINUTES = 5
     const val NIGHT_LONG_SCREEN_ON_WAKE_MINUTES = 10
     const val MORNING_ACTIVE_CLUSTER_WINDOW_MINUTES = 30
-    const val MORNING_ACTIVE_CLUSTER_COUNT = 3
     const val MORNING_ACTIVE_CLUSTER_TOTAL_SECONDS = 3 * 60
     const val NIGHT_ACTIVE_CLUSTER_COUNT = 4
     const val NIGHT_ACTIVE_CLUSTER_TOTAL_SECONDS = 6 * 60
@@ -62,38 +60,47 @@ data class SleepObservations(
 object SleepAnalyzer {
     fun windowFor(targetDate: LocalDate, zoneId: ZoneId = ZoneId.systemDefault()): SleepWindow {
         val start = targetDate.minusDays(1)
-            .atTime(LocalTime.of(SleepRules.NIGHT_WINDOW_START_HOUR, 0))
+            .atTime(LocalTime.of(SleepRules.SLEEP_WINDOW_BOUNDARY_HOUR, 0))
             .atZone(zoneId)
             .toInstant()
             .toEpochMilli()
         val end = targetDate
-            .atTime(LocalTime.of(SleepRules.NIGHT_WINDOW_END_HOUR, 0))
+            .atTime(LocalTime.of(SleepRules.SLEEP_WINDOW_BOUNDARY_HOUR, 0))
             .atZone(zoneId)
             .toInstant()
             .toEpochMilli()
         return SleepWindow(start, end)
     }
 
+    fun windowForCurrentAnalysis(
+        nowMillis: Long = System.currentTimeMillis(),
+        zoneId: ZoneId = ZoneId.systemDefault(),
+    ): SleepWindow {
+        val now = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDateTime()
+        val standardWindow = windowFor(targetDateForAnalysis(now), zoneId)
+        return SleepWindow(
+            startMillis = standardWindow.startMillis,
+            endMillis = nowMillis,
+        )
+    }
+
     fun targetDateForAnalysis(
         now: LocalDateTime = LocalDateTime.now(),
-    ): LocalDate =
-        if (now.toLocalTime().isBefore(LocalTime.NOON)) {
-            now.toLocalDate().minusDays(1)
-        } else {
-            now.toLocalDate()
-        }
+    ): LocalDate = now.toLocalDate()
 
     fun analyze(
         targetDate: LocalDate,
         events: List<ScreenEvent>,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
+        window: SleepWindow = windowFor(targetDate, zoneId),
     ): SleepRecord =
         analyze(
             targetDate = targetDate,
             observations = SleepObservations(screenEvents = events),
             zoneId = zoneId,
             nowMillis = nowMillis,
+            window = window,
         )
 
     fun analyze(
@@ -101,15 +108,12 @@ object SleepAnalyzer {
         observations: SleepObservations,
         zoneId: ZoneId = ZoneId.systemDefault(),
         nowMillis: Long = System.currentTimeMillis(),
+        window: SleepWindow = windowFor(targetDate, zoneId),
     ): SleepRecord {
-        val window = windowFor(targetDate, zoneId)
         val sortedScreenEvents = observations.screenEvents
             .filter { it.timestampMillis in window.startMillis..window.endMillis }
             .sortedBy { it.timestampMillis }
         val awakeSessions = screenOnSessions(sortedScreenEvents, window)
-        val interactions = observations.interactionEvents
-            .filter { it.timestampMillis in window.startMillis..window.endMillis }
-            .sortedBy { it.timestampMillis }
         val locationSignals = observations.locationSignals
             .filter { it.timestampMillis in window.startMillis..window.endMillis }
             .sortedBy { it.timestampMillis }
@@ -122,7 +126,6 @@ object SleepAnalyzer {
         val merged = mergeSleepCompatibleIntervals(
             intervals = offIntervals,
             awakeSessions = awakeSessions,
-            interactions = interactions,
             locationSignals = locationSignals,
             targetDate = targetDate,
             zoneId = zoneId,
@@ -232,7 +235,6 @@ object SleepAnalyzer {
     private fun mergeSleepCompatibleIntervals(
         intervals: List<SleepInterval>,
         awakeSessions: List<AwakeSession>,
-        interactions: List<DeviceInteractionEvent>,
         locationSignals: List<LocationSleepSignal>,
         targetDate: LocalDate,
         zoneId: ZoneId,
@@ -252,7 +254,6 @@ object SleepAnalyzer {
                     gapStartMillis = end,
                     gapEndMillis = next.startMillis,
                     awakeSessions = awakeSessions,
-                    interactions = interactions,
                     locationSignals = locationSignals,
                     targetDate = targetDate,
                     zoneId = zoneId,
@@ -275,7 +276,6 @@ object SleepAnalyzer {
         gapStartMillis: Long,
         gapEndMillis: Long,
         awakeSessions: List<AwakeSession>,
-        interactions: List<DeviceInteractionEvent>,
         locationSignals: List<LocationSleepSignal>,
         targetDate: LocalDate,
         zoneId: ZoneId,
@@ -301,26 +301,16 @@ object SleepAnalyzer {
                     SleepRules.MORNING_ACTIVE_CLUSTER_WINDOW_MINUTES,
                 ))
         }
-        val clusterCount = cluster.size
         val clusterSeconds = cluster.sumOf { it.durationSeconds() }
-        val hasUnlockOrAppUse = interactions.any {
-            it.timestampMillis in gapStartMillis..gapEndMillis &&
-                (it.type == DeviceInteractionType.KEYGUARD_UNLOCKED ||
-                    it.type == DeviceInteractionType.FOREGROUND_APP ||
-                    it.type == DeviceInteractionType.USER_INTERACTION)
-        }
 
         return if (morning) {
             if (gapMinutes >= SleepRules.MORNING_LONG_SCREEN_ON_WAKE_MINUTES) return false
-            if (hasUnlockOrAppUse && gapSeconds >= SleepRules.MICRO_AWAKE_MERGE_SECONDS) return false
-            if (clusterCount >= SleepRules.MORNING_ACTIVE_CLUSTER_COUNT) return false
             if (clusterSeconds >= SleepRules.MORNING_ACTIVE_CLUSTER_TOTAL_SECONDS) return false
             gapSeconds <= SleepRules.MICRO_AWAKE_MERGE_SECONDS
         } else {
             if (gapMinutes > SleepRules.NIGHT_LONG_SCREEN_ON_WAKE_MINUTES) return false
-            if (hasUnlockOrAppUse && gapMinutes >= 5) return false
             if (
-                clusterCount >= SleepRules.NIGHT_ACTIVE_CLUSTER_COUNT &&
+                cluster.size >= SleepRules.NIGHT_ACTIVE_CLUSTER_COUNT &&
                 clusterSeconds >= SleepRules.NIGHT_ACTIVE_CLUSTER_TOTAL_SECONDS
             ) {
                 return false

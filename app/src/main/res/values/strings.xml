@@ -71,7 +71,7 @@
     <string name="status_pressure_scale">压力等级 0–10</string>
     <string name="status_pressure_scale_hint">低 · 中 · 高</string>
     <string name="status_pressure_month">近一个月压力变化</string>
-    <string name="status_sleep_yesterday">昨日睡眠状态</string>
+    <string name="status_sleep_latest">最近一次睡眠</string>
     <string name="status_sleep_duration">睡眠时长</string>
     <string name="status_bedtime">入睡时间</string>
     <string name="status_wake_time">起床时间</string>
@@ -79,7 +79,7 @@
     <string name="status_sleep_month">近一个月睡眠状态</string>
     <string name="status_sleep_window">入睡与起床时间</string>
     <string name="status_insights">趋势洞察</string>
-    <string name="status_sleep_section">昨夜概览</string>
+    <string name="status_sleep_section">最近睡眠</string>
     <string name="status_sleep_section_subtitle">最近一次可用的睡眠记录。</string>
     <string name="status_trends_section">趋势与节奏</string>
     <string name="status_trends_section_subtitle">用更长时间范围识别变化，而不是被单日波动影响。</string>

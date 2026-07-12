@@ -19,4 +19,4 @@ screen_event,1783137180000,2026-07-04T11:53:00+08:00,SCREEN_ON
 section,interaction_event,timestampMillis,localDateTime,type
 section,location_signal,timestampMillis,localDateTime,atSleepPlace,stationary,leftSleepPlace
 section,expected_result,dateEpochDay,sleepStartMillis,sleepEndMillis,durationMinutes,wakeUpCount,isMissing,createdAtMillis
-expected_result,20638,1783090800000,1783126200000,590,0,false,1783137900000
+expected_result,20638,1783090800000,1783137180000,773,4,false,1783137900000

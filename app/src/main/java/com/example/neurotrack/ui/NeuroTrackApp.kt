@@ -674,7 +674,7 @@ private fun StatusScreen(
             }
 
             item {
-                YesterdaySleepStatusCard(summary = status.yesterdaySleep)
+                LatestSleepStatusCard(summary = status.latestSleep)
             }
 
             item {
@@ -1028,8 +1028,8 @@ private fun smoothPath(points: List<Offset>): Path {
 }
 
 @Composable
-private fun YesterdaySleepStatusCard(summary: SleepSummaryDisplay) {
-    ChartCard(title = stringResource(R.string.status_sleep_yesterday), icon = Icons.Rounded.Schedule) {
+private fun LatestSleepStatusCard(summary: SleepSummaryDisplay) {
+    ChartCard(title = stringResource(R.string.status_sleep_latest), icon = Icons.Rounded.Schedule) {
         SleepMetricRow(
             duration = summary.durationHours?.let { stringResource(R.string.status_hours_format, it) }
                 ?: stringResource(R.string.status_missing),

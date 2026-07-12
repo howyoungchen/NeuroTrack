@@ -27,7 +27,8 @@ object SleepRawDataCodec {
         require(endMillis > startMillis) { "endMillis must be greater than startMillis" }
         val startDate = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate()
         val endDateTime = Instant.ofEpochMilli(endMillis).atZone(zoneId).toLocalDateTime()
-        return if (!endDateTime.toLocalTime().isAfter(LocalTime.NOON)) {
+        val cycleBoundary = LocalTime.of(SleepRules.SLEEP_WINDOW_BOUNDARY_HOUR, 0)
+        return if (!endDateTime.toLocalTime().isAfter(cycleBoundary)) {
             endDateTime.toLocalDate()
         } else {
             startDate.plusDays(1)

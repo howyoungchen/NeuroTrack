@@ -29,7 +29,7 @@ data class AssessmentSubmissionDisplay(
 data class StatusDisplayModel(
     val stress: StressResult,
     val pressureTrend: PressureTrendDisplay,
-    val yesterdaySleep: SleepSummaryDisplay,
+    val latestSleep: SleepSummaryDisplay,
     val weekSleep: SleepPeriodDisplay,
     val monthSleep: SleepPeriodDisplay,
     val insights: List<StatusInsight>,
@@ -119,7 +119,7 @@ fun buildStatusDisplayModel(
             latestScore = trendPoints.lastOrNull { it.score != null }?.score,
             chartLabels = trendLabels(trendPoints),
         ),
-        yesterdaySleep = summaryFor(
+        latestSleep = summaryFor(
             SleepRecordSelection.latestForDisplay(
                 records = sleepRecords,
                 todayEpochDay = today.toEpochDay(),

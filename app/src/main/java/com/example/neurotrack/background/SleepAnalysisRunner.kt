@@ -7,6 +7,7 @@ import com.example.neurotrack.domain.SleepObservations
 import com.example.neurotrack.domain.SleepRawDataCodec
 import com.example.neurotrack.domain.SleepRecord
 import com.example.neurotrack.domain.SleepWindow
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -33,6 +34,21 @@ class SleepAnalysisRunner(
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
     private val zoneIdProvider: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
+    fun runForCurrentTime(
+        zoneId: ZoneId = zoneIdProvider(),
+    ): SleepAnalysisRun {
+        val currentTimeMillis = nowMillis()
+        val targetDate = SleepAnalyzer.targetDateForAnalysis(
+            Instant.ofEpochMilli(currentTimeMillis).atZone(zoneId).toLocalDateTime(),
+        )
+        return run(
+            targetDate = targetDate,
+            zoneId = zoneId,
+            window = SleepAnalyzer.windowForCurrentAnalysis(currentTimeMillis, zoneId),
+            createdAtMillis = currentTimeMillis,
+        )
+    }
+
     fun runForTargetDate(
         targetDate: LocalDate = SleepAnalyzer.targetDateForAnalysis(),
         zoneId: ZoneId = zoneIdProvider(),
@@ -42,6 +58,7 @@ class SleepAnalysisRunner(
             targetDate = targetDate,
             zoneId = zoneId,
             window = window,
+            createdAtMillis = nowMillis(),
         )
     }
 
@@ -59,6 +76,7 @@ class SleepAnalysisRunner(
             ),
             zoneId = zoneId,
             window = SleepWindow(startMillis, endMillis),
+            createdAtMillis = nowMillis(),
         )
     }
 
@@ -66,6 +84,7 @@ class SleepAnalysisRunner(
         targetDate: LocalDate,
         zoneId: ZoneId,
         window: SleepWindow,
+        createdAtMillis: Long,
     ): SleepAnalysisRun {
         val usageRead = usageObservationSource.read(window.startMillis, window.endMillis)
         val locationSignals = locationSignalSource.read(window.startMillis, window.endMillis, zoneId)
@@ -74,7 +93,8 @@ class SleepAnalysisRunner(
             targetDate = targetDate,
             observations = observations,
             zoneId = zoneId,
-            nowMillis = nowMillis(),
+            nowMillis = createdAtMillis,
+            window = window,
         )
         return SleepAnalysisRun(
             targetDate = targetDate,

@@ -9,11 +9,11 @@ data class SleepRawExportRange(
 )
 
 object SleepRawExportRangeModel {
-    fun defaultRange(zoneId: ZoneId = ZoneId.systemDefault()): SleepRawExportRange {
-        val window = SleepAnalyzer.windowFor(
-            targetDate = SleepAnalyzer.targetDateForAnalysis(),
-            zoneId = zoneId,
-        )
+    fun defaultRange(
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        nowMillis: Long = System.currentTimeMillis(),
+    ): SleepRawExportRange {
+        val window = SleepAnalyzer.windowForCurrentAnalysis(nowMillis, zoneId)
         return SleepRawExportRange(
             startMillis = window.startMillis,
             endMillis = window.endMillis,

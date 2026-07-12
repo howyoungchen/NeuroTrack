@@ -20,7 +20,7 @@ class NeuroTrackApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
         NotificationHelper.createChannels(this)
-        NeuroWorkScheduler.scheduleDailySleepAnalysis(this)
+        NeuroWorkScheduler.schedulePeriodicSleepAnalysis(this)
         NeuroWorkScheduler.scheduleAssessmentReminder(this, container.settingsStore.settings.value)
     }
 }

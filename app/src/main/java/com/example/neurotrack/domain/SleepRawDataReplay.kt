@@ -7,5 +7,6 @@ object SleepRawDataReplay {
             observations = export.observations,
             zoneId = export.zoneId,
             nowMillis = export.expectedResult?.createdAtMillis ?: export.generatedAtMillis,
+            window = SleepWindow(export.rangeStartMillis, export.rangeEndMillis),
         )
 }

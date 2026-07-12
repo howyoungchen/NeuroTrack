@@ -11,12 +11,18 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.neurotrack.background.EXTRA_DESTINATION
+import com.example.neurotrack.background.NeuroWorkScheduler
 import com.example.neurotrack.ui.NeuroTrackRoot
 import com.example.neurotrack.ui.NeuroTrackViewModel
 import com.example.neurotrack.ui.destinationToScreen
 import com.example.neurotrack.ui.theme.NeuroTrackTheme
 
 class MainActivity : ComponentActivity() {
+    override fun onResume() {
+        super.onResume()
+        NeuroWorkScheduler.refreshSleepAnalysis(this)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
