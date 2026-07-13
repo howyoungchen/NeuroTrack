@@ -1,73 +1,72 @@
 package com.example.neurotrack.mindfulness
 
+import android.content.Context
+import android.content.res.Configuration
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
-import kotlin.math.PI
-import kotlin.math.sin
+import android.media.MediaPlayer
+import androidx.annotation.RawRes
+import java.util.Locale
 
-class MindfulnessAudioPlayer {
-    private val playing = AtomicBoolean(false)
-    private var audioTrack: AudioTrack? = null
-    private var playbackThread: Thread? = null
+class MindfulnessAudioPlayer(
+    private val context: Context,
+) {
+    private var mediaPlayer: MediaPlayer? = null
 
-    fun start() {
-        if (!playing.compareAndSet(false, true)) return
-        val sampleRate = 22_050
-        val buffer = createAmbientLoop(sampleRate)
-        val minBuffer = AudioTrack.getMinBufferSize(
-            sampleRate,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-        )
-        val track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build(),
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build(),
-            )
-            .setBufferSizeInBytes(maxOf(minBuffer, buffer.size * 2))
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-        audioTrack = track
-        track.play()
-        playbackThread = thread(name = "mindfulness-audio", isDaemon = true) {
-            runCatching {
-                while (playing.get()) {
-                    track.write(buffer, 0, buffer.size, AudioTrack.WRITE_BLOCKING)
-                }
-            }
+    val currentPositionMillis: Int
+        get() = runCatching { mediaPlayer?.currentPosition ?: 0 }.getOrDefault(0)
+
+    val durationMillis: Int
+        get() = runCatching { mediaPlayer?.duration ?: 0 }.getOrDefault(0)
+
+    val isPlaying: Boolean
+        get() = runCatching { mediaPlayer?.isPlaying == true }.getOrDefault(false)
+
+    fun start(
+        @RawRes audioResId: Int,
+        languageTag: String,
+        onCompletion: () -> Unit,
+        onError: () -> Unit,
+    ): Int {
+        stop()
+        val configuration = Configuration(context.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag(languageTag))
         }
+        val localizedContext = context.createConfigurationContext(configuration)
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+        val player = MediaPlayer.create(localizedContext, audioResId, attributes, 0)
+            ?: error("Unable to open mindfulness audio resource")
+        mediaPlayer = player
+        player.setOnCompletionListener { completedPlayer ->
+            if (mediaPlayer === completedPlayer) onCompletion()
+        }
+        player.setOnErrorListener { failedPlayer, _, _ ->
+            if (mediaPlayer === failedPlayer) onError()
+            true
+        }
+        player.start()
+        return player.duration.coerceAtLeast(0)
+    }
+
+    fun togglePlayback(): Boolean {
+        val player = mediaPlayer ?: return false
+        if (player.isPlaying) player.pause() else player.start()
+        return player.isPlaying
+    }
+
+    fun restart() {
+        val player = mediaPlayer ?: return
+        player.seekTo(0)
+        player.start()
     }
 
     fun stop() {
-        if (!playing.getAndSet(false)) return
-        audioTrack?.pause()
-        audioTrack?.flush()
-        audioTrack?.release()
-        audioTrack = null
-        playbackThread = null
-    }
-
-    private fun createAmbientLoop(sampleRate: Int): ShortArray {
-        val seconds = 8
-        return ShortArray(sampleRate * seconds) { index ->
-            val time = index.toDouble() / sampleRate
-            val envelope = 0.55 - 0.35 * kotlin.math.cos(2.0 * PI * time / seconds)
-            val pad = sin(2.0 * PI * 174.0 * time) * 0.38 +
-                sin(2.0 * PI * 220.0 * time) * 0.24 +
-                sin(2.0 * PI * 261.63 * time) * 0.12
-            (pad * envelope * Short.MAX_VALUE * 0.16).toInt().toShort()
-        }
+        val player = mediaPlayer ?: return
+        mediaPlayer = null
+        runCatching { player.stop() }
+        player.reset()
+        player.release()
     }
 }

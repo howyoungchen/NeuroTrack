@@ -22,18 +22,18 @@
 
 ## What it looks like now
 
-These are real v2.0 development screens from an Android 16 phone. The weekly pressure value comes from answers entered specifically for the screenshots; it is not my health record.
+These are real screens from the current development build on Android 16. Their contents are for demonstration only; they are not my health record.
 
 <table>
   <tr>
-    <td width="25%"><img src="docs/images/screenshots/status-en.png" alt="Status screen with this week's pressure and an eight-week trend"></td>
-    <td width="25%"><img src="docs/images/screenshots/practice-en.png" alt="Practice screen with weekly rhythm, reflection, and mindfulness"></td>
+    <td width="25%"><img src="docs/images/screenshots/status-en.png" alt="Status screen with the previous week's pressure and an eight-week trend"></td>
+    <td width="25%"><img src="docs/images/screenshots/practice-en.png" alt="Practice screen with weekly reflection and guided mindfulness"></td>
     <td width="25%"><img src="docs/images/screenshots/reflection-en.png" alt="Past-week reflection showing one concrete question at a time"></td>
-    <td width="25%"><img src="docs/images/screenshots/settings-en.png" alt="Settings screen with reminders, notifications, language, and appearance"></td>
+    <td width="25%"><img src="docs/images/screenshots/settings-en.png" alt="Settings screen with weekly refresh day, notification permission, language, and appearance"></td>
   </tr>
   <tr>
-    <td align="center"><strong>This week, not today</strong><br><sub>No verdict from one difficult day</sub></td>
-    <td align="center"><strong>Practice and reflect</strong><br><sub>Four quiet moments each week</sub></td>
+    <td align="center"><strong>Last week, not today</strong><br><sub>Generated after the week has closed</sub></td>
+    <td align="center"><strong>Six guided courses</strong><br><sub>One complete round each week</sub></td>
     <td align="center"><strong>Ten concrete questions</strong><br><sub>Daily life instead of abstract labels</sub></td>
     <td align="center"><strong>Restrained settings</strong><br><sub>Only what the app genuinely needs</sub></td>
   </tr>
@@ -53,16 +53,16 @@ One rule has stayed with me from the beginning: **the app itself must not become
 
 ## The rhythm I wanted
 
-On Monday, Wednesday, Friday, and Sunday, I set aside 5, 10, or 15 minutes. Mindfulness pins the screen, asks me to leave the phone alone, and plays gentle sound generated on the device.
+Each weekly round contains six guided mindfulness courses: sensory grounding, mindful breathing, body scan, leaves on a stream, loving kindness and self-compassion, and sitting with difficult emotions. I can complete them in any order. The screen is pinned during playback, and leaving the app interrupts the course rather than silently counting it as complete.
 
 Once a week, I look back through ten questions. They do not vaguely ask whether I feel anxious. They ask about sleep, phone switching, disagreement, work, relationships, surroundings, physical signals, and rest.
 
-Those answers and the week's completed practices form one weekly pressure score. Status keeps only the current bar and an eight-week trend. The details do not need to sit in front of me every day.
+The weekly refresh day is configurable and defaults to Monday. At 5:00 on that day, the round closes, the previous round's answers and six-course completion form one pressure score, and a fresh round begins. The reflection opens only on the day before the refresh; if it is still missing at 10:00 that night, one reminder is sent.
 
 ```mermaid
 flowchart LR
-    A["Look back on seven days<br/>through ten concrete questions"] --> B["Mon · Wed · Fri · Sun<br/>leave a quiet moment"]
-    B --> C["Form one weekly pressure score<br/>instead of judging every day"]
+    A["Look back on seven days<br/>through ten concrete questions"] --> B["Complete six guided courses<br/>in any order"]
+    B --> C["Selected refresh day at 05:00<br/>form the previous round's score"]
     C --> D["See the current level<br/>and eight-week change"]
     D --> E["Put the phone down<br/>and continue living"]
 ```
@@ -85,9 +85,9 @@ NeuroTrack does not decide whether you are ill or relapsing, and it does not tel
 | --- | --- |
 | What was the past week actually like? | A ten-question reflection grounded in ordinary life |
 | Is pressure slowly accumulating? | One 0–10 weekly score combining reflection and mindfulness completion |
-| Did I really stop for a while? | Planned practice on Monday, Wednesday, Friday, and Sunday, recorded as completed or interrupted |
+| Did I really stop for a while? | One weekly round of six guided courses, each recorded as completed or interrupted |
 | Will I reach for another app during practice? | The screen is pinned; leaving, unpinning, or switching apps interrupts the session |
-| Do I need to keep watching it? | Status shows only this week and the recent eight-week change |
+| Do I need to keep watching it? | Status shows the most recently completed week and the recent eight-week change |
 | Where does the data go? | Reflections and practice records stay on the device with cloud backup disabled |
 
 The app supports English and Chinese, plus system, light, and dark themes.
@@ -108,12 +108,12 @@ This information is private, so NeuroTrack tries to know less and say less.
 - Weekly reflections, mindfulness records, and settings stay in the on-device Room database and preferences.
 - The app requests no Internet permission, uploads nothing, and disables system cloud backup.
 - It does not read app usage, location, screen content, messages, or anything inside another app.
-- Mindfulness sound is generated locally in real time; no audio download is needed.
-- On Android 13 and above, the only permission prompt is for practice-day notifications.
+- English and Mandarin guided recordings are bundled in the APK and selected from the app language; playback needs no network connection.
+- On Android 13 and above, the only permission prompt is for the incomplete-reflection reminder on the reflection day.
 
 | Permission or system capability | Why it is used | User approval |
 | --- | --- | --- |
-| Notifications | One reminder at your chosen time on practice days | Optional |
+| Notifications | One reminder at 10:00 on the reflection day, only when the weekly reflection is incomplete | Optional |
 | Boot completed | Restore the local reminder schedule after a restart | Handled by Android |
 | Screen pinning | Reduce app switching during mindfulness; unpinning interrupts the session | Confirmed by Android when practice starts |
 
@@ -151,12 +151,16 @@ Before opening a PR, run:
 
 Thanks for reading this far, and thanks to everyone who has tried the app, shared an experience, or taken the time to report a problem.
 
+Special thanks to the **NSW Multicultural Health Communication Service (NSW Health)** for creating and sharing the Multicultural Mindfulness Resources. NeuroTrack includes the six unaltered exercise recordings from the official [English](https://www.mhcs.health.nsw.gov.au/campaigns-and-projects/current-campaigns/mindfulness-program-audio-resources/english) and [Mandarin](https://www.mhcs.health.nsw.gov.au/campaigns-and-projects/current-campaigns/mindfulness-program-audio-resources/mandarin) collections.
+
+The recordings remain © NSW Multicultural Health Communication Service and are provided under the source site's [copyright and reuse conditions](https://www.mhcs.health.nsw.gov.au/about-us/copyright-and-disclaimer). They are kept in their original form and are not covered by the NeuroTrack source-code license.
+
 If recovery, self-observation, mindfulness, or privacy-friendly tools matter to you, you are welcome to [open an issue](https://github.com/howyoungchen/NeuroTrack/issues), improve the wording, add tests, or help with translation.
 
 I have one request: this project is for people doing the difficult work of living. Please be kind, avoid stigmatizing language, and treat anything that sounds like medical advice with care.
 
 ## License
 
-This project is released under the [NeuroTrack Noncommercial License](LICENSE).
+The NeuroTrack code and original project assets are released under the [NeuroTrack Noncommercial License](LICENSE). The bundled NSW MHCS recordings retain their separate copyright and reuse conditions described above and in [Third-party notices](THIRD_PARTY_NOTICES.md).
 
 Personal use, learning, research, modification, and noncommercial distribution are permitted. Commercial use requires prior written authorization.

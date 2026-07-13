@@ -3,6 +3,7 @@ package com.example.neurotrack.domain
 import java.time.LocalDate
 
 data class WeeklyAssessmentRecord(
+    val weekStart: LocalDate,
     val createdAtMillis: Long,
     val totalScore: Int,
 )
@@ -15,11 +16,9 @@ enum class MindfulnessSessionStatus {
 }
 
 data class MindfulnessSessionRecord(
-    val id: Long = 0,
     val startedAtMillis: Long,
-    val endedAtMillis: Long? = null,
-    val plannedDurationMinutes: Int,
     val status: MindfulnessSessionStatus,
+    val lessonId: Int,
 )
 
 enum class StressBand {

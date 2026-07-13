@@ -5,39 +5,54 @@
     <string name="nav_practice">练习</string>
     <string name="nav_settings">设置</string>
 
-    <string name="status_title">这一周，慢慢看见自己</string>
-    <string name="status_subtitle">压力不是一天的结论。这里仅保留最近几周的变化和本周状态。</string>
-    <string name="status_current_week">本周压力</string>
+    <string name="status_title">每周回看，慢慢看见自己</string>
+    <string name="status_subtitle">每%1$s 05:00，上一轮的回顾与六节正念课程会生成一份周压力记录。</string>
+    <string name="status_current_week">上周压力</string>
     <string name="status_score_format">%1$.1f</string>
     <string name="status_out_of_ten">/ 10</string>
     <string name="status_band_low">平稳</string>
     <string name="status_band_medium">需要关照</string>
     <string name="status_band_high">偏高</string>
-    <string name="status_no_score">完成本周回顾后生成压力分数</string>
+    <string name="status_no_score">上一轮未完成问答，因此没有生成压力分数</string>
     <string name="status_recent_trend">最近压力变化</string>
     <string name="status_recent_trend_hint">每个点代表一周，正念完成情况会与周回顾一起计入。</string>
     <string name="status_no_trend">完成第一次周回顾后，趋势会从这里开始。</string>
 
     <string name="practice_title">练习与回顾</string>
-    <string name="practice_subtitle">用十个问题理解过去一周，再用一次安静练习把注意力带回当下。</string>
-    <string name="practice_weekly_rhythm">本周节奏</string>
-    <string name="practice_completed_format">已完成 %1$d / 4 次正念</string>
-    <string name="practice_schedule">周一 · 周三 · 周五 · 周日</string>
-    <string name="practice_day_mon">一</string>
-    <string name="practice_day_wed">三</string>
-    <string name="practice_day_fri">五</string>
-    <string name="practice_day_sun">日</string>
+    <string name="practice_subtitle">完成一份周回顾，也在本轮内走完六节引导正念课程。</string>
+    <string name="practice_weekly_rhythm">本轮进度</string>
+    <string name="practice_completed_format">已完成 %1$d / 6 节正念课程</string>
+    <string name="practice_schedule">每%1$s 05:00 开启新一轮；六节可按任意顺序完成。</string>
+    <string name="practice_round_complete">本轮六节课程已全部完成。</string>
     <string name="weekly_review_title">本周回顾</string>
-    <string name="weekly_review_desc">从睡眠、注意力、关系、环境与身体等角度，完整回看过去一周。</string>
+    <string name="weekly_review_desc">每%1$s，从睡眠、注意力、关系、环境与身体等角度，完整回看过去一周。</string>
     <string name="weekly_review_start">开始回顾</string>
     <string name="weekly_review_again">重新回顾</string>
     <string name="weekly_review_done">本周已完成</string>
+    <string name="weekly_review_day_only">问答仅在每%1$s开放。</string>
     <string name="mindfulness_title">正念练习</string>
-    <string name="mindfulness_desc">开始后会播放舒缓音乐。离开应用或切换到其他应用，本次练习会被判定为中断。</string>
-    <string name="mindfulness_duration">选择时长</string>
-    <string name="mindfulness_minutes">%1$d 分钟</string>
-    <string name="mindfulness_start">开始正念</string>
-    <string name="mindfulness_off_day">今天不是计划练习日；下一次请在周一、三、五或日开始。</string>
+    <string name="mindfulness_desc">六节引导音频保存在本机。每节完整播放一次即计入本轮，也可以随时重听。</string>
+    <string name="mindfulness_source_credit">音频由 NSW Multicultural Health Communication Service 提供；中文界面播放普通话版。</string>
+    <string name="mindfulness_start_lesson">开始本节</string>
+    <string name="mindfulness_replay">重新播放</string>
+    <string name="mindfulness_lesson_1_title">感官觉察落地练习</string>
+    <string name="mindfulness_lesson_1_desc">借助五种感官回到此刻，重新连接身体、思绪与周围环境。</string>
+    <string name="mindfulness_lesson_1_duration">约 8 分钟</string>
+    <string name="mindfulness_lesson_2_title">正念呼吸</string>
+    <string name="mindfulness_lesson_2_desc">觉察呼吸与身体感受，辨认并滋养有帮助的想法，让思绪慢慢清晰。</string>
+    <string name="mindfulness_lesson_2_duration">约 7–9 分钟</string>
+    <string name="mindfulness_lesson_3_title">身体扫描</string>
+    <string name="mindfulness_lesson_3_desc">逐步觉察身体各处的感受，在不评判中放松紧绷并照顾整体状态。</string>
+    <string name="mindfulness_lesson_3_duration">约 10–14 分钟</string>
+    <string name="mindfulness_lesson_4_title">溪流上的树叶</string>
+    <string name="mindfulness_lesson_4_desc">观察念头出现、停留与离开，练习用新的方式回应它们。</string>
+    <string name="mindfulness_lesson_4_duration">约 8–11 分钟</string>
+    <string name="mindfulness_lesson_5_title">慈爱与自我关怀</string>
+    <string name="mindfulness_lesson_5_desc">把善意与关怀送给自己、所爱的人，以及生活中不容易相处的人。</string>
+    <string name="mindfulness_lesson_5_duration">约 11–15 分钟</string>
+    <string name="mindfulness_lesson_6_title">与困难情绪共处</string>
+    <string name="mindfulness_lesson_6_desc">为痛苦情绪留出空间，练习以更有帮助的方式理解和回应它们。</string>
+    <string name="mindfulness_lesson_6_duration">约 12–17 分钟</string>
 
     <string name="assessment_title">过去一周回顾</string>
     <string name="assessment_subtitle">没有标准答案。选择最接近过去七天真实状态的一项。</string>
@@ -46,7 +61,7 @@
     <string name="assessment_next">下一题</string>
     <string name="assessment_submit">完成回顾</string>
     <string name="assessment_result_title">本周回顾已记录</string>
-    <string name="assessment_result_body">你的回答会和本周正念完成情况一起生成周压力分数。</string>
+    <string name="assessment_result_body">本轮结束后的%1$s 05:00，你的回答会和六节课程完成情况一起生成周压力分数。</string>
     <string name="common_done">知道了</string>
 
     <string-array name="assessment_questions">
@@ -74,20 +89,24 @@
 
     <string name="session_focus_title">把这一段时间留给自己</string>
     <string name="session_focus_hint">系统会固定当前屏幕。离开应用会中断本次记录。</string>
-    <string name="session_music">舒缓音乐正在播放</string>
+    <string name="session_guided_audio">本机引导音频</string>
     <string name="session_time_format">%1$02d:%2$02d</string>
+    <string name="session_pause">暂停</string>
+    <string name="session_resume">继续</string>
+    <string name="session_restart">重播</string>
     <string name="session_end_early">提前结束</string>
-    <string name="session_completed">练习完成，感谢你把时间留给自己。</string>
+    <string name="session_completed">本节已完成，并已计入本轮进度。</string>
     <string name="session_interrupted">检测到你离开了应用，本次练习未完成。</string>
-    <string name="session_abandoned">本次练习已提前结束，不计入本周完成次数。</string>
+    <string name="session_abandoned">本次练习已提前结束，不计入本轮进度。</string>
 
     <string name="settings_title">设置</string>
-    <string name="settings_subtitle">只保留正念提醒所需的通知权限，其余体验完全在本地完成。</string>
-    <string name="settings_reminder">正念提醒</string>
-    <string name="settings_reminder_days">每周一、三、五、日提醒</string>
-    <string name="settings_reminder_time">提醒时间</string>
+    <string name="settings_subtitle">选择适合自己的每周节奏；记录与音频仍只留在本机。</string>
+    <string name="settings_refresh_day">每周刷新日</string>
+    <string name="settings_refresh_day_desc">当前每%1$s 05:00 生成上一轮压力并开启新一轮；问答在前一天（%2$s）开放。</string>
+    <string name="settings_reminder">周回顾提醒</string>
+    <string name="settings_reminder_days">若到%1$s 22:00 仍未完成问答，应用会提醒一次。</string>
     <string name="settings_permission">通知权限</string>
-    <string name="settings_permission_desc">仅用于在练习日提醒你做正念，不读取使用情况或位置。</string>
+    <string name="settings_permission_desc">仅用于%1$s的未完成问答提醒，不读取使用情况或位置。</string>
     <string name="permission_granted">已允许</string>
     <string name="permission_missing">去允许</string>
     <string name="settings_language">语言</string>
@@ -101,8 +120,17 @@
     <string name="about_version">版本 %1$s</string>
     <string name="disclaimer">NeuroTrack 仅用于自我观察与正念练习，不构成医疗诊断或治疗建议。如持续感到痛苦或有伤害自己的风险，请及时寻求专业帮助。</string>
 
-    <string name="notification_channel_mindfulness">正念提醒</string>
-    <string name="notification_channel_mindfulness_desc">每周一、三、五、日的正念练习提醒。</string>
-    <string name="mindfulness_reminder_title">给自己留一段安静时间</string>
-    <string name="mindfulness_reminder_text">今天是正念练习日，准备好后开始一次专注练习。</string>
+    <string name="notification_channel_weekly_review">周回顾提醒</string>
+    <string name="notification_channel_weekly_review_desc">仅在%1$s 22:00 提醒尚未完成的每周问答。</string>
+    <string name="weekly_review_reminder_title">这一周，也值得回头看一眼</string>
+    <string name="weekly_review_reminder_text">本轮问答还没有完成；现在可以用几分钟做一次周回顾。</string>
+    <string-array name="weekday_names">
+        <item>周一</item>
+        <item>周二</item>
+        <item>周三</item>
+        <item>周四</item>
+        <item>周五</item>
+        <item>周六</item>
+        <item>周日</item>
+    </string-array>
 </resources>

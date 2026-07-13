@@ -18,14 +18,14 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.example.neurotrack.AppSettings
 import com.example.neurotrack.R
 import com.example.neurotrack.SettingsStore
+import com.example.neurotrack.data.NeuroRepository
+import com.example.neurotrack.data.NeuroTrackDatabase
 import com.example.neurotrack.domain.MindfulnessSchedule
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.TimeUnit
 
 const val EXTRA_DESTINATION = "destination"
@@ -35,21 +35,27 @@ object NotificationHelper {
     const val CHANNEL_ID = "mindfulness_reminders"
     private const val NOTIFICATION_ID = 2100
 
-    fun createChannel(context: Context) {
+    fun createChannel(context: Context, refreshDay: DayOfWeek) {
+        val assessmentDay = MindfulnessSchedule.assessmentDay(refreshDay)
+        val assessmentDayLabel = context.resources
+            .getStringArray(R.array.weekday_names)[assessmentDay.value - 1]
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                context.getString(R.string.notification_channel_mindfulness),
+                context.getString(R.string.notification_channel_weekly_review),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
-                description = context.getString(R.string.notification_channel_mindfulness_desc)
+                description = context.getString(
+                    R.string.notification_channel_weekly_review_desc,
+                    assessmentDayLabel,
+                )
             },
         )
     }
 
     @SuppressLint("MissingPermission")
-    fun showMindfulnessReminder(context: Context) {
+    fun showWeeklyReviewReminder(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
@@ -66,8 +72,8 @@ object NotificationHelper {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.mindfulness_reminder_title))
-            .setContentText(context.getString(R.string.mindfulness_reminder_text))
+            .setContentTitle(context.getString(R.string.weekly_review_reminder_title))
+            .setContentText(context.getString(R.string.weekly_review_reminder_text))
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
@@ -75,44 +81,48 @@ object NotificationHelper {
     }
 }
 
-object MindfulnessScheduler {
-    private const val WORK_PREFIX = "mindfulness_reminder_"
+object WeeklyRoutineScheduler {
+    private const val WORK_NAME = "weekly_review_reminder"
 
-    fun schedule(context: Context, settings: AppSettings) {
-        MindfulnessSchedule.practiceDays.forEach { day ->
-            val request = PeriodicWorkRequestBuilder<MindfulnessReminderWorker>(7, TimeUnit.DAYS)
-                .setInitialDelay(
-                    delayUntil(day, settings.reminderHour, settings.reminderMinute),
-                    TimeUnit.MILLISECONDS,
-                )
-                .build()
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_PREFIX + day.name,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request,
+    fun schedule(context: Context, refreshDay: DayOfWeek) {
+        val workManager = WorkManager.getInstance(context)
+        val request = PeriodicWorkRequestBuilder<WeeklyReviewReminderWorker>(7, TimeUnit.DAYS)
+            .setInitialDelay(
+                delayUntilNextReminder(LocalDateTime.now(), refreshDay),
+                TimeUnit.MILLISECONDS,
             )
-        }
+            .build()
+        workManager.enqueueUniquePeriodicWork(
+            WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request,
+        )
     }
 
-    private fun delayUntil(day: DayOfWeek, hour: Int, minute: Int): Long {
-        val now = LocalDateTime.now()
-        var target = now
-            .with(TemporalAdjusters.nextOrSame(day))
-            .withHour(hour.coerceIn(0, 23))
-            .withMinute(minute.coerceIn(0, 59))
-            .withSecond(0)
-            .withNano(0)
-        if (!target.isAfter(now)) target = target.plusWeeks(1)
-        return Duration.between(now, target).toMillis().coerceAtLeast(0)
-    }
+    internal fun delayUntilNextReminder(
+        now: LocalDateTime,
+        refreshDay: DayOfWeek,
+    ): Long = Duration.between(
+        now,
+        MindfulnessSchedule.nextAssessmentReminder(now, refreshDay),
+    )
+            .toMillis()
+            .coerceAtLeast(0)
 }
 
-class MindfulnessReminderWorker(
+class WeeklyReviewReminderWorker(
     context: Context,
     params: WorkerParameters,
 ) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
-        NotificationHelper.showMindfulnessReminder(applicationContext)
+        val now = LocalDateTime.now()
+        val refreshDay = SettingsStore(applicationContext).settings.value.refreshDay
+        if (!MindfulnessSchedule.isAssessmentReminderWindow(now, refreshDay)) return Result.success()
+        val repository = NeuroRepository(NeuroTrackDatabase.getInstance(applicationContext))
+        val weekStart = MindfulnessSchedule.weekStart(now, refreshDay)
+        if (!repository.hasAssessment(weekStart.toEpochDay())) {
+            NotificationHelper.showWeeklyReviewReminder(applicationContext)
+        }
         return Result.success()
     }
 }
@@ -120,7 +130,8 @@ class MindfulnessReminderWorker(
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action in setOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED)) {
-            MindfulnessScheduler.schedule(context, SettingsStore(context).settings.value)
+            val refreshDay = SettingsStore(context).settings.value.refreshDay
+            WeeklyRoutineScheduler.schedule(context, refreshDay)
         }
     }
 }

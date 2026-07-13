@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -50,18 +51,18 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -114,8 +115,10 @@ import com.example.neurotrack.domain.MindfulnessSessionStatus
 import com.example.neurotrack.domain.MindfulnessSchedule
 import com.example.neurotrack.domain.StressBand
 import com.example.neurotrack.domain.WeeklyStressPoint
-import java.time.LocalDate
+import com.example.neurotrack.mindfulness.MindfulnessLesson
+import com.example.neurotrack.mindfulness.MindfulnessLessons
 import kotlinx.coroutines.delay
+import java.time.DayOfWeek
 import java.util.Locale
 
 enum class AppScreen(val titleRes: Int, val icon: ImageVector) {
@@ -137,11 +140,13 @@ fun NeuroTrackRoot(viewModel: NeuroTrackViewModel, initialScreen: AppScreen = Ap
                 state = session,
                 onEnd = viewModel::abandonMindfulness,
                 onFocusUnavailable = viewModel::interruptMindfulness,
+                onTogglePlayback = viewModel::toggleMindfulnessPlayback,
+                onRestart = viewModel::restartMindfulness,
             )
             return@LocalizedResources
         }
         val uiState by viewModel.uiState.collectAsState()
-        val latestSubmission by viewModel.latestSubmission.collectAsState()
+        val assessmentSaved by viewModel.assessmentSaved.collectAsState()
         var selectedScreen by rememberSaveable { mutableStateOf(initialScreen) }
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
@@ -171,21 +176,22 @@ fun NeuroTrackRoot(viewModel: NeuroTrackViewModel, initialScreen: AppScreen = Ap
                 modifier = Modifier.padding(padding),
             ) { screen ->
                 when (screen) {
-                    AppScreen.STATUS -> StatusScreen(uiState.status)
+                    AppScreen.STATUS -> StatusScreen(uiState.status, settings.refreshDay)
                     AppScreen.PRACTICE -> PracticeScreen(
                         uiState = uiState,
                         session = session,
-                        latestSubmission = latestSubmission,
+                        refreshDay = settings.refreshDay,
+                        assessmentSaved = assessmentSaved,
                         onSubmit = viewModel::submitAssessment,
-                        onDismissSubmission = viewModel::clearLatestSubmission,
+                        onDismissSubmission = viewModel::clearAssessmentSaved,
                         onStartMindfulness = viewModel::startMindfulness,
                         onClearSessionResult = viewModel::clearSessionResult,
                     )
                     AppScreen.SETTINGS -> SettingsScreen(
                         settings = settings,
+                        onRefreshDay = viewModel::setRefreshDay,
                         onLanguage = viewModel::setLanguage,
                         onTheme = viewModel::setThemeMode,
-                        onReminder = viewModel::setReminderTime,
                     )
                 }
             }
@@ -221,9 +227,18 @@ internal fun LocalizedResources(languageTag: String, content: @Composable () -> 
 }
 
 @Composable
-private fun StatusScreen(status: StatusDisplayModel) {
+private fun StatusScreen(status: StatusDisplayModel, refreshDay: DayOfWeek) {
     PageList {
-        item { PageHeader(R.string.status_title, R.string.status_subtitle, Icons.Rounded.Favorite) }
+        item {
+            PageHeader(
+                title = R.string.status_title,
+                subtitle = stringResource(
+                    R.string.status_subtitle,
+                    weekdayLabel(refreshDay),
+                ),
+                icon = Icons.Rounded.Favorite,
+            )
+        }
         item { PressureCard(status) }
         item { TrendCard(status.trend) }
     }
@@ -356,23 +371,29 @@ private fun TrendCard(points: List<WeeklyStressPoint>) {
 private fun PracticeScreen(
     uiState: NeuroTrackUiState,
     session: MindfulnessSessionUiState,
-    latestSubmission: AssessmentHistoryItem?,
+    refreshDay: DayOfWeek,
+    assessmentSaved: Boolean,
     onSubmit: (List<Int>) -> Unit,
     onDismissSubmission: () -> Unit,
     onStartMindfulness: (Int) -> Unit,
     onClearSessionResult: () -> Unit,
 ) {
+    val assessmentDayLabel = weekdayLabel(MindfulnessSchedule.assessmentDay(refreshDay))
+    val refreshDayLabel = weekdayLabel(refreshDay)
     var showAssessment by rememberSaveable { mutableStateOf(false) }
-    if (showAssessment) {
+    LaunchedEffect(uiState.assessmentAvailable) {
+        if (!uiState.assessmentAvailable) showAssessment = false
+    }
+    if (showAssessment && uiState.assessmentAvailable) {
         AssessmentScreen(onBack = { showAssessment = false }, onSubmit = onSubmit)
         return
     }
 
-    latestSubmission?.let {
+    if (assessmentSaved) {
         AlertDialog(
             onDismissRequest = {},
             title = { Text(stringResource(R.string.assessment_result_title)) },
-            text = { Text(stringResource(R.string.assessment_result_body)) },
+            text = { Text(stringResource(R.string.assessment_result_body, refreshDayLabel)) },
             confirmButton = {
                 Button(onClick = onDismissSubmission) { Text(stringResource(R.string.common_done)) }
             },
@@ -396,21 +417,22 @@ private fun PracticeScreen(
         )
     }
 
-    val thisWeekReviewed = uiState.status.current.assessmentScore != null
-    val currentWeekStart = MindfulnessSchedule.weekStart(uiState.today)
-    val completedPracticeDates = remember(uiState.sessions, currentWeekStart) {
-        MindfulnessSchedule.completedPracticeDates(currentWeekStart, uiState.sessions)
-    }
-    val isPracticeDay = MindfulnessSchedule.isPracticeDay(uiState.today)
-    var duration by rememberSaveable { mutableIntStateOf(10) }
+    val thisWeekReviewed = uiState.thisWeekReviewed
+    val completedLessonIds = uiState.completedLessonIds
     PageList {
-        item { PageHeader(R.string.practice_title, R.string.practice_subtitle, Icons.Rounded.SelfImprovement) }
-        item { WeeklyRhythm(currentWeekStart, completedPracticeDates) }
+        item {
+            PageHeader(
+                R.string.practice_title,
+                stringResource(R.string.practice_subtitle),
+                Icons.Rounded.SelfImprovement,
+            )
+        }
+        item { WeeklyRoundProgress(completedLessonIds, refreshDayLabel) }
         item {
             FeatureCard(
                 icon = Icons.Rounded.CheckCircle,
                 title = stringResource(R.string.weekly_review_title),
-                body = stringResource(R.string.weekly_review_desc),
+                body = stringResource(R.string.weekly_review_desc, assessmentDayLabel),
                 accent = MaterialTheme.colorScheme.tertiary,
             ) {
                 if (thisWeekReviewed) {
@@ -420,78 +442,130 @@ private fun PracticeScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Button(onClick = { showAssessment = true }, modifier = Modifier.fillMaxWidth()) {
+                if (!uiState.assessmentAvailable) {
+                    Text(
+                        stringResource(R.string.weekly_review_day_only, assessmentDayLabel),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Button(
+                    onClick = { showAssessment = true },
+                    enabled = uiState.assessmentAvailable,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text(stringResource(if (thisWeekReviewed) R.string.weekly_review_again else R.string.weekly_review_start))
                 }
             }
         }
         item {
             FeatureCard(
-                icon = Icons.Rounded.SelfImprovement,
+                icon = Icons.Rounded.Headphones,
                 title = stringResource(R.string.mindfulness_title),
                 body = stringResource(R.string.mindfulness_desc),
                 accent = MaterialTheme.colorScheme.primary,
             ) {
-                Text(stringResource(R.string.mindfulness_duration), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 10, 15).forEach { minutes ->
-                        ChoicePill(
-                            selected = duration == minutes,
-                            text = stringResource(R.string.mindfulness_minutes, minutes),
-                            onClick = { duration = minutes },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-                if (!isPracticeDay) {
-                    Text(
-                        stringResource(R.string.mindfulness_off_day),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Button(
-                    onClick = { onStartMindfulness(duration) },
-                    enabled = isPracticeDay,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Rounded.SelfImprovement, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.mindfulness_start))
-                }
+                Text(
+                    stringResource(R.string.mindfulness_source_credit),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
+        }
+        items(MindfulnessLessons.all, key = MindfulnessLesson::id) { lesson ->
+            MindfulnessLessonCard(
+                lesson = lesson,
+                completed = lesson.id in completedLessonIds,
+                onStart = { onStartMindfulness(lesson.id) },
+            )
         }
     }
 }
 
 @Composable
-private fun WeeklyRhythm(weekStart: LocalDate, completedDates: Set<LocalDate>) {
+private fun WeeklyRoundProgress(
+    completedLessonIds: Set<Int>,
+    refreshDayLabel: String,
+) {
     SectionCard(Icons.Rounded.Timeline, stringResource(R.string.practice_weekly_rhythm)) {
         Text(
-            stringResource(R.string.practice_completed_format, completedDates.size),
+            stringResource(R.string.practice_completed_format, completedLessonIds.size),
             style = MaterialTheme.typography.titleMedium,
         )
-        Text(stringResource(R.string.practice_schedule), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val labels = listOf(
-                R.string.practice_day_mon,
-                R.string.practice_day_wed,
-                R.string.practice_day_fri,
-                R.string.practice_day_sun,
+        Text(
+            stringResource(R.string.practice_schedule, refreshDayLabel),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(Modifier.fillMaxWidth().height(7.dp).background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)) {
+            Box(
+                Modifier.fillMaxWidth(completedLessonIds.size / MindfulnessSchedule.LESSON_COUNT.toFloat())
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.secondary, CircleShape),
             )
-            MindfulnessSchedule.practiceDates(weekStart).zip(labels).forEach { (date, label) ->
-                val completed = date in completedDates
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            MindfulnessSchedule.lessonIds.forEach { lessonId ->
+                val completed = lessonId in completedLessonIds
                 Surface(
                     shape = CircleShape,
                     color = if (completed) MaterialTheme.colorScheme.secondaryContainer
                     else MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(42.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (completed) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
-                        else Text(stringResource(label), fontWeight = FontWeight.SemiBold)
+                        else Text(lessonId.toString(), fontWeight = FontWeight.SemiBold)
                     }
                 }
+            }
+        }
+        if (completedLessonIds.size == MindfulnessSchedule.LESSON_COUNT) {
+            Text(
+                stringResource(R.string.practice_round_complete),
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MindfulnessLessonCard(
+    lesson: MindfulnessLesson,
+    completed: Boolean,
+    onStart: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = if (completed) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.48f)
+        else MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (completed) MaterialTheme.colorScheme.secondaryContainer
+                    else MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(46.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        if (completed) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
+                        else Text(lesson.id.toString(), fontWeight = FontWeight.Bold)
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(lesson.titleRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(lesson.durationRes),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+            Text(stringResource(lesson.descriptionRes), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
+                Icon(if (completed) Icons.Rounded.Replay else Icons.Rounded.PlayArrow, null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(if (completed) R.string.mindfulness_replay else R.string.mindfulness_start_lesson))
             }
         }
     }
@@ -583,6 +657,8 @@ private fun MindfulnessSessionScreen(
     state: MindfulnessSessionUiState,
     onEnd: () -> Unit,
     onFocusUnavailable: () -> Unit = onEnd,
+    onTogglePlayback: () -> Unit,
+    onRestart: () -> Unit,
 ) {
     val context = LocalView.current.context
     val view = LocalView.current
@@ -624,6 +700,7 @@ private fun MindfulnessSessionScreen(
         label = "breath",
     )
     val accent = MaterialTheme.colorScheme.primary
+    val lesson = MindfulnessLessons.find(state.lessonId)
     Box(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(
@@ -636,7 +713,11 @@ private fun MindfulnessSessionScreen(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxSize().padding(28.dp),
         ) {
-            Text(stringResource(R.string.session_focus_title), style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+            Text(
+                lesson?.let { stringResource(it.titleRes) } ?: stringResource(R.string.session_focus_title),
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center,
+            )
             Spacer(Modifier.height(12.dp))
             Text(stringResource(R.string.session_focus_hint), color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
             Spacer(Modifier.height(44.dp))
@@ -659,11 +740,24 @@ private fun MindfulnessSessionScreen(
             }
             Spacer(Modifier.height(28.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.MusicNote, null, tint = accent)
+                Icon(Icons.Rounded.Headphones, null, tint = accent)
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.session_music), color = accent)
+                Text(stringResource(R.string.session_guided_audio), color = accent)
             }
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(24.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onTogglePlayback) {
+                    Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(if (state.isPlaying) R.string.session_pause else R.string.session_resume))
+                }
+                OutlinedButton(onClick = onRestart) {
+                    Icon(Icons.Rounded.Replay, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.session_restart))
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onEnd) { Text(stringResource(R.string.session_end_early)) }
         }
     }
@@ -672,36 +766,63 @@ private fun MindfulnessSessionScreen(
 @Composable
 private fun SettingsScreen(
     settings: com.example.neurotrack.AppSettings,
+    onRefreshDay: (DayOfWeek) -> Unit,
     onLanguage: (String) -> Unit,
     onTheme: (String) -> Unit,
-    onReminder: (Int, Int) -> Unit,
 ) {
     val context = LocalContext.current
+    val refreshDayLabel = weekdayLabel(settings.refreshDay)
+    val assessmentDayLabel = weekdayLabel(MindfulnessSchedule.assessmentDay(settings.refreshDay))
     var notificationGranted by remember { mutableStateOf(context.notificationsGranted()) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationGranted = it
     }
     PageList {
-        item { PageHeader(R.string.settings_title, R.string.settings_subtitle, Icons.Rounded.Settings) }
         item {
-            SectionCard(Icons.Rounded.Notifications, stringResource(R.string.settings_reminder)) {
-                Text(stringResource(R.string.settings_reminder_days), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(stringResource(R.string.settings_reminder_time), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberDropdown(settings.reminderHour, (0..23).toList(), { "%02d".format(it) }, Modifier.weight(1f)) {
-                        onReminder(it, settings.reminderMinute)
-                    }
-                    Text(":", style = MaterialTheme.typography.headlineSmall)
-                    val minutes = listOf(0, 15, 30, 45)
-                    NumberDropdown(settings.reminderMinute, minutes, { "%02d".format(it) }, Modifier.weight(1f)) {
-                        onReminder(settings.reminderHour, it)
+            PageHeader(
+                R.string.settings_title,
+                stringResource(R.string.settings_subtitle),
+                Icons.Rounded.Settings,
+            )
+        }
+        item {
+            SectionCard(Icons.Rounded.Timeline, stringResource(R.string.settings_refresh_day)) {
+                Text(
+                    stringResource(
+                        R.string.settings_refresh_day_desc,
+                        refreshDayLabel,
+                        assessmentDayLabel,
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                DayOfWeek.entries.chunked(4).forEach { days ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        days.forEach { day ->
+                            ChoicePill(
+                                selected = settings.refreshDay == day,
+                                text = weekdayLabel(day),
+                                onClick = { onRefreshDay(day) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
-                HorizontalDivider()
+            }
+        }
+        item {
+            SectionCard(Icons.Rounded.Notifications, stringResource(R.string.settings_reminder)) {
+                Text(
+                    stringResource(R.string.settings_reminder_days, assessmentDayLabel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(stringResource(R.string.settings_permission), style = MaterialTheme.typography.titleSmall)
-                        Text(stringResource(R.string.settings_permission_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(R.string.settings_permission_desc, assessmentDayLabel),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     OutlinedButton(onClick = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -736,25 +857,6 @@ private fun SettingsScreen(
             SectionCard(Icons.Rounded.Favorite, stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME))
                 Text(stringResource(R.string.disclaimer), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun NumberDropdown(
-    value: Int,
-    options: List<Int>,
-    formatter: (Int) -> String,
-    modifier: Modifier = Modifier,
-    onSelect: (Int) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) { Text(formatter(value)) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
-                DropdownMenuItem(text = { Text(formatter(option)) }, onClick = { expanded = false; onSelect(option) })
             }
         }
     }
@@ -809,13 +911,17 @@ private fun SectionCard(icon: ImageVector, title: String, content: @Composable C
 }
 
 @Composable
-private fun PageHeader(title: Int, subtitle: Int, icon: ImageVector) {
+private fun PageHeader(title: Int, subtitle: String, icon: ImageVector) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
         Text(stringResource(title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-        Text(stringResource(subtitle), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+@Composable
+private fun weekdayLabel(day: DayOfWeek): String =
+    stringArrayResource(R.array.weekday_names)[day.value - 1]
 
 @Composable
 private fun PageList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {

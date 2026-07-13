@@ -4,51 +4,86 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
 object MindfulnessSchedule {
-    val practiceDays: Set<DayOfWeek> = linkedSetOf(
-        DayOfWeek.MONDAY,
-        DayOfWeek.WEDNESDAY,
-        DayOfWeek.FRIDAY,
-        DayOfWeek.SUNDAY,
-    )
+    const val LESSON_COUNT = 6
+    val lessonIds: IntRange = 1..LESSON_COUNT
+    val refreshTime: LocalTime = LocalTime.of(5, 0)
+    val assessmentReminderTime: LocalTime = LocalTime.of(22, 0)
 
-    fun isPracticeDay(date: LocalDate): Boolean = date.dayOfWeek in practiceDays
+    fun weekStart(
+        date: LocalDate,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): LocalDate = date.with(TemporalAdjusters.previousOrSame(refreshDay))
 
-    fun weekStart(date: LocalDate): LocalDate =
-        date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-
-    fun practiceDates(weekStart: LocalDate): List<LocalDate> {
-        val monday = weekStart(weekStart)
-        return listOf(0L, 2L, 4L, 6L).map(monday::plusDays)
+    fun weekStart(
+        now: LocalDateTime,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): LocalDate {
+        val start = weekStart(now.toLocalDate(), refreshDay)
+        return if (now.toLocalDate() == start && now.toLocalTime().isBefore(refreshTime)) {
+            start.minusWeeks(1)
+        } else {
+            start
+        }
     }
 
-    fun completedPracticeDates(
+    fun weekStart(
+        millis: Long,
+        zoneId: ZoneId = ZoneId.systemDefault(),
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): LocalDate = weekStart(
+        now = Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDateTime(),
+        refreshDay = refreshDay,
+    )
+
+    fun lastCompletedWeekStart(
+        now: LocalDateTime,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): LocalDate = weekStart(now, refreshDay).minusWeeks(1)
+
+    fun completedLessonIds(
         weekStart: LocalDate,
         sessions: List<MindfulnessSessionRecord>,
         zoneId: ZoneId = ZoneId.systemDefault(),
-    ): Set<LocalDate> {
-        val plannedDates = practiceDates(weekStart).toSet()
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): Set<Int> {
+        val start = weekStart(weekStart, refreshDay)
         return sessions
             .asSequence()
             .filter { it.status == MindfulnessSessionStatus.COMPLETED }
-            .map { Instant.ofEpochMilli(it.startedAtMillis).atZone(zoneId).toLocalDate() }
-            .filter { it in plannedDates }
+            .filter { it.lessonId in lessonIds }
+            .filter { weekStart(it.startedAtMillis, zoneId, refreshDay) == start }
+            .map(MindfulnessSessionRecord::lessonId)
             .toSet()
     }
 
-    fun nextReminder(now: LocalDateTime, hour: Int, minute: Int): LocalDateTime {
-        val safeHour = hour.coerceIn(0, 23)
-        val safeMinute = minute.coerceIn(0, 59)
-        return (0L..7L)
+    fun assessmentDay(refreshDay: DayOfWeek): DayOfWeek = refreshDay.minus(1)
+
+    fun isAssessmentDay(
+        date: LocalDate,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): Boolean = date.dayOfWeek == assessmentDay(refreshDay)
+
+    fun isAssessmentReminderWindow(
+        now: LocalDateTime,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): Boolean = isAssessmentDay(now.toLocalDate(), refreshDay) &&
+        !now.toLocalTime().isBefore(assessmentReminderTime)
+
+    fun nextAssessmentReminder(
+        now: LocalDateTime,
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+    ): LocalDateTime =
+        (0L..7L)
             .asSequence()
             .map { now.toLocalDate().plusDays(it) }
-            .filter(::isPracticeDay)
-            .map { it.atTime(safeHour, safeMinute) }
+            .filter { it.dayOfWeek == assessmentDay(refreshDay) }
+            .map { it.atTime(assessmentReminderTime) }
             .first { it.isAfter(now) }
-    }
 }
 
 object WeeklyStressCalculator {
@@ -59,38 +94,35 @@ object WeeklyStressCalculator {
         weekStart: LocalDate,
         assessments: List<WeeklyAssessmentRecord>,
         sessions: List<MindfulnessSessionRecord>,
-        asOfDate: LocalDate = LocalDate.now(),
-        practiceDueThroughDate: LocalDate = asOfDate,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
     ): WeeklyStressResult {
-        val monday = MindfulnessSchedule.weekStart(weekStart)
-        val weekEndExclusive = monday.plusWeeks(1)
-        val effectiveAsOfDate = minOf(asOfDate, weekEndExclusive.minusDays(1))
-        val effectivePracticeDueDate = minOf(practiceDueThroughDate, weekEndExclusive.minusDays(1))
+        val start = MindfulnessSchedule.weekStart(weekStart, refreshDay)
         val latestAssessment = assessments
-            .filter { millisToDate(it.createdAtMillis, zoneId) in monday..effectiveAsOfDate }
+            .filter { it.weekStart == start }
             .maxByOrNull { it.createdAtMillis }
         val assessmentScore = latestAssessment?.totalScore
             ?.div(MAX_ASSESSMENT_SCORE)
             ?.times(10.0)
             ?.coerceIn(0.0, 10.0)
-        val plannedDates = MindfulnessSchedule.practiceDates(monday)
-            .filter { !it.isAfter(effectivePracticeDueDate) }
-            .toSet()
-        val completed = MindfulnessSchedule.completedPracticeDates(monday, sessions, zoneId)
-            .count { it in plannedDates }
-        val completionRate = if (plannedDates.isEmpty()) 1.0 else completed.toDouble() / plannedDates.size
+        val completed = MindfulnessSchedule.completedLessonIds(
+            weekStart = start,
+            sessions = sessions,
+            zoneId = zoneId,
+            refreshDay = refreshDay,
+        ).size
+        val completionRate = completed.toDouble() / MindfulnessSchedule.LESSON_COUNT
         val score = assessmentScore?.let {
             it + ((1.0 - completionRate) * MAX_RECOVERY_GAP_PENALTY)
         }?.coerceIn(0.0, 10.0)
 
         return WeeklyStressResult(
-            weekStart = monday,
+            weekStart = start,
             score = score,
             assessmentScore = assessmentScore,
             mindfulnessCompletionRate = completionRate,
             completedPractices = completed,
-            scheduledPractices = plannedDates.size,
+            scheduledPractices = MindfulnessSchedule.LESSON_COUNT,
             band = bandForScore(score),
         )
     }
@@ -98,25 +130,26 @@ object WeeklyStressCalculator {
     fun trend(
         assessments: List<WeeklyAssessmentRecord>,
         sessions: List<MindfulnessSessionRecord>,
-        endWeekStart: LocalDate = MindfulnessSchedule.weekStart(LocalDate.now()),
+        refreshDay: DayOfWeek = DayOfWeek.MONDAY,
+        endWeekStart: LocalDate = MindfulnessSchedule.lastCompletedWeekStart(
+            LocalDateTime.now(),
+            refreshDay,
+        ),
         weeks: Int = 8,
-        asOfDate: LocalDate = LocalDate.now(),
-        practiceDueThroughDate: LocalDate = asOfDate,
         zoneId: ZoneId = ZoneId.systemDefault(),
     ): List<WeeklyStressPoint> {
         require(weeks > 0) { "weeks must be positive" }
-        val lastMonday = MindfulnessSchedule.weekStart(endWeekStart)
+        val lastWeekStart = MindfulnessSchedule.weekStart(endWeekStart, refreshDay)
         return (weeks - 1 downTo 0).map { weeksAgo ->
-            val monday = lastMonday.minusWeeks(weeksAgo.toLong())
+            val start = lastWeekStart.minusWeeks(weeksAgo.toLong())
             val result = calculate(
-                weekStart = monday,
+                weekStart = start,
                 assessments = assessments,
                 sessions = sessions,
-                asOfDate = minOf(asOfDate, monday.plusDays(6)),
-                practiceDueThroughDate = minOf(practiceDueThroughDate, monday.plusDays(6)),
                 zoneId = zoneId,
+                refreshDay = refreshDay,
             )
-            WeeklyStressPoint(monday, result.score, result.band)
+            WeeklyStressPoint(start, result.score, result.band)
         }
     }
 
@@ -127,6 +160,4 @@ object WeeklyStressCalculator {
         else -> StressBand.HIGH
     }
 
-    private fun millisToDate(millis: Long, zoneId: ZoneId): LocalDate =
-        Instant.ofEpochMilli(millis).atZone(zoneId).toLocalDate()
 }

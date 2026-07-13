@@ -6,14 +6,10 @@ import com.example.neurotrack.domain.WeeklyAssessmentRecord
 import com.example.neurotrack.domain.WeeklyStressCalculator
 import com.example.neurotrack.domain.WeeklyStressPoint
 import com.example.neurotrack.domain.WeeklyStressResult
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
-
-data class AssessmentHistoryItem(
-    val id: Long,
-    val createdAtMillis: Long,
-    val totalScore: Int,
-)
 
 data class StatusDisplayModel(
     val current: WeeklyStressResult,
@@ -27,28 +23,26 @@ data class StatusDisplayModel(
 fun buildStatusDisplayModel(
     assessments: List<WeeklyAssessmentRecord>,
     sessions: List<MindfulnessSessionRecord>,
-    today: LocalDate = LocalDate.now(),
-    dueThroughDate: LocalDate = today,
+    now: LocalDateTime = LocalDateTime.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
+    refreshDay: DayOfWeek = DayOfWeek.MONDAY,
 ): StatusDisplayModel {
-    val weekStart = MindfulnessSchedule.weekStart(today)
+    val weekStart = MindfulnessSchedule.lastCompletedWeekStart(now, refreshDay)
     return StatusDisplayModel(
         current = WeeklyStressCalculator.calculate(
             weekStart = weekStart,
             assessments = assessments,
             sessions = sessions,
-            asOfDate = today,
-            practiceDueThroughDate = dueThroughDate,
             zoneId = zoneId,
+            refreshDay = refreshDay,
         ),
         trend = WeeklyStressCalculator.trend(
             assessments = assessments,
             sessions = sessions,
             endWeekStart = weekStart,
             weeks = 8,
-            asOfDate = today,
-            practiceDueThroughDate = dueThroughDate,
             zoneId = zoneId,
+            refreshDay = refreshDay,
         ),
     )
 }

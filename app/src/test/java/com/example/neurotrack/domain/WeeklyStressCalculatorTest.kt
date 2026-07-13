@@ -11,28 +11,27 @@ class WeeklyStressCalculatorTest {
     private val weekStart = LocalDate.of(2026, 7, 13)
 
     @Test
-    fun calculate_usesWeeklyAssessmentAndFourCompletedPractices() {
+    fun calculate_usesWeeklyAssessmentAndSixCompletedCourses() {
         val result = WeeklyStressCalculator.calculate(
             weekStart = weekStart,
-            assessments = listOf(assessment(day = 6, score = 24)),
-            sessions = listOf(0L, 2L, 4L, 6L).map { completedSession(it) },
-            asOfDate = weekStart.plusDays(6),
+            assessments = listOf(assessment(score = 24)),
+            sessions = (1..6).map(::completedSession),
             zoneId = zoneId,
         )
 
         assertEquals(8.0, result.score!!, 0.001)
         assertEquals(1.0, result.mindfulnessCompletionRate, 0.001)
-        assertEquals(4, result.completedPractices)
+        assertEquals(6, result.completedPractices)
+        assertEquals(6, result.scheduledPractices)
         assertEquals(StressBand.HIGH, result.band)
     }
 
     @Test
-    fun calculate_missingPracticesRaiseWeeklyPressure() {
+    fun calculate_missingCoursesRaiseWeeklyPressure() {
         val result = WeeklyStressCalculator.calculate(
             weekStart = weekStart,
-            assessments = listOf(assessment(day = 6, score = 15)),
+            assessments = listOf(assessment(score = 15)),
             sessions = emptyList(),
-            asOfDate = weekStart.plusDays(6),
             zoneId = zoneId,
         )
 
@@ -46,8 +45,7 @@ class WeeklyStressCalculatorTest {
         val result = WeeklyStressCalculator.calculate(
             weekStart = weekStart,
             assessments = emptyList(),
-            sessions = listOf(completedSession(0L)),
-            asOfDate = weekStart.plusDays(6),
+            sessions = listOf(completedSession(1)),
             zoneId = zoneId,
         )
 
@@ -57,42 +55,29 @@ class WeeklyStressCalculatorTest {
     }
 
     @Test
-    fun calculate_doesNotPenalizeFuturePracticeDays() {
+    fun calculate_duplicateCourseOnlyCountsOnce() {
         val result = WeeklyStressCalculator.calculate(
             weekStart = weekStart,
-            assessments = listOf(assessment(day = 0, score = 15)),
-            sessions = listOf(completedSession(0L)),
-            asOfDate = weekStart,
+            assessments = listOf(assessment(score = 15)),
+            sessions = listOf(completedSession(1), completedSession(1)),
             zoneId = zoneId,
         )
 
-        assertEquals(5.0, result.score!!, 0.001)
-        assertEquals(1, result.scheduledPractices)
-        assertEquals(1.0, result.mindfulnessCompletionRate, 0.001)
+        assertEquals(1, result.completedPractices)
+        assertEquals(1.0 / 6.0, result.mindfulnessCompletionRate, 0.001)
     }
 
     @Test
-    fun calculate_keepsTodaysReflectionBeforePracticeReminder() {
-        val result = WeeklyStressCalculator.calculate(
-            weekStart = weekStart,
-            assessments = listOf(assessment(day = 0, score = 15)),
-            sessions = emptyList(),
-            asOfDate = weekStart,
-            practiceDueThroughDate = weekStart.minusDays(1),
-            zoneId = zoneId,
-        )
-
-        assertEquals(5.0, result.score!!, 0.001)
-        assertEquals(0, result.scheduledPractices)
-    }
-
-    @Test
-    fun trend_returnsOnePointPerWeek() {
+    fun trend_returnsOnePointPerCompletedWeek() {
         val previousWeek = weekStart.minusWeeks(1)
         val points = WeeklyStressCalculator.trend(
             assessments = listOf(
-                WeeklyAssessmentRecord(previousWeek.plusDays(6).atStartOfDay(zoneId).toInstant().toEpochMilli(), 9),
-                assessment(day = 6, score = 21),
+                WeeklyAssessmentRecord(
+                    weekStart = previousWeek,
+                    createdAtMillis = millis(previousWeek.plusDays(6)),
+                    totalScore = 9,
+                ),
+                assessment(score = 21),
             ),
             sessions = emptyList(),
             endWeekStart = weekStart,
@@ -104,17 +89,20 @@ class WeeklyStressCalculatorTest {
         assertEquals(2, points.size)
     }
 
-    private fun assessment(day: Long, score: Int): WeeklyAssessmentRecord =
+    private fun assessment(score: Int): WeeklyAssessmentRecord =
         WeeklyAssessmentRecord(
-            createdAtMillis = weekStart.plusDays(day).atStartOfDay(zoneId).toInstant().toEpochMilli(),
+            weekStart = weekStart,
+            createdAtMillis = millis(weekStart.plusDays(6)),
             totalScore = score,
         )
 
-    private fun completedSession(day: Long): MindfulnessSessionRecord =
+    private fun completedSession(lessonId: Int): MindfulnessSessionRecord =
         MindfulnessSessionRecord(
-            startedAtMillis = weekStart.plusDays(day).atTime(20, 0).atZone(zoneId).toInstant().toEpochMilli(),
-            endedAtMillis = weekStart.plusDays(day).atTime(20, 10).atZone(zoneId).toInstant().toEpochMilli(),
-            plannedDurationMinutes = 10,
+            startedAtMillis = millis(weekStart.plusDays(lessonId.toLong() - 1)),
             status = MindfulnessSessionStatus.COMPLETED,
+            lessonId = lessonId,
         )
+
+    private fun millis(date: LocalDate): Long =
+        date.atTime(20, 0).atZone(zoneId).toInstant().toEpochMilli()
 }

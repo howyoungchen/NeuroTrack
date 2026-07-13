@@ -33,6 +33,7 @@ data class MindfulnessSessionEntity(
     val endedAtMillis: Long? = null,
     val plannedDurationMinutes: Int,
     val status: String,
+    val lessonId: Int,
 )
 
 @Dao
@@ -42,6 +43,9 @@ interface AssessmentDao {
 
     @Query("SELECT * FROM weekly_assessments ORDER BY weekStartEpochDay DESC")
     fun observeAll(): Flow<List<AssessmentRecordEntity>>
+
+    @Query("SELECT COUNT(*) FROM weekly_assessments WHERE weekStartEpochDay = :weekStartEpochDay")
+    suspend fun countForWeek(weekStartEpochDay: Long): Int
 }
 
 @Dao
@@ -58,7 +62,7 @@ interface MindfulnessDao {
 
 @Database(
     entities = [AssessmentRecordEntity::class, MindfulnessSessionEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class NeuroTrackDatabase : RoomDatabase() {
@@ -92,7 +96,7 @@ class NeuroRepository(
     suspend fun submitAssessment(
         weekStartEpochDay: Long,
         answers: List<Int>,
-    ): AssessmentRecordEntity {
+    ) {
         require(answers.size == 10 && answers.all { it in 0..3 })
         val record = AssessmentRecordEntity(
             weekStartEpochDay = weekStartEpochDay,
@@ -100,18 +104,25 @@ class NeuroRepository(
             answersCsv = answers.joinToString(","),
             totalScore = answers.sum(),
         )
-        val id = database.assessmentDao().insert(record)
-        return record.copy(id = id)
+        database.assessmentDao().insert(record)
     }
 
-    suspend fun startMindfulness(plannedDurationMinutes: Int): MindfulnessSessionEntity {
+    suspend fun hasAssessment(weekStartEpochDay: Long): Boolean =
+        database.assessmentDao().countForWeek(weekStartEpochDay) > 0
+
+    suspend fun startMindfulness(
+        lessonId: Int,
+        plannedDurationMinutes: Int,
+    ): Long {
+        require(lessonId in 1..6)
         require(plannedDurationMinutes > 0)
         val record = MindfulnessSessionEntity(
             startedAtMillis = nowMillis(),
             plannedDurationMinutes = plannedDurationMinutes,
             status = MindfulnessSessionStatus.IN_PROGRESS.name,
+            lessonId = lessonId,
         )
-        return record.copy(id = database.mindfulnessDao().insert(record))
+        return database.mindfulnessDao().insert(record)
     }
 
     suspend fun finishMindfulness(id: Long, status: MindfulnessSessionStatus) {
