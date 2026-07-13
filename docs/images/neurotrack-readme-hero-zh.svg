@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+  <title id="title">NeuroTrack / 心迹</title>
+  <desc id="desc">回看一周的压力，认真完成正念，数据留在本机</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FAFAFD"/>
+      <stop offset="0.58" stop-color="#F2F2FA"/>
+      <stop offset="1" stop-color="#E4E5FF"/>
+    </linearGradient>
+    <linearGradient id="pressure" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2F8C78"/>
+      <stop offset="0.56" stop-color="#A77B00"/>
+      <stop offset="1" stop-color="#C43F32"/>
+    </linearGradient>
+    <linearGradient id="practice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6169B1"/>
+      <stop offset="1" stop-color="#2F8C78"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="150%" height="155%">
+      <feDropShadow dx="0" dy="14" stdDeviation="19" flood-color="#262B61" flood-opacity="0.13"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="540" rx="40" fill="url(#bg)"/>
+  <circle cx="1110" cy="62" r="158" fill="#BCEEDC" opacity="0.48"/>
+  <circle cx="45" cy="548" r="132" fill="#FFE7A9" opacity="0.42"/>
+  <path d="M570 55c52 18 74 63 57 106-17 42-68 65-115 45-46-19-68-68-48-108 20-40 59-58 106-43Z" fill="#DCDDFE" opacity="0.42"/>
+
+  <g transform="translate(72 0)">
+    <text x="0" y="128" fill="#171820" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="700">NeuroTrack / 心迹</text>
+    <text x="0" y="194" fill="#454D92" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="31" font-weight="650">看见这一周，也给自己一点安静</text>
+    <text x="0" y="238" fill="#656673" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="21">我给自己写的 Android 小工具</text>
+
+    <g transform="translate(0 304)">
+      <g>
+        <rect width="158" height="50" rx="25" fill="#FFFFFF" opacity="0.94"/>
+        <path d="M20 30l8-8 7 5 11-13" fill="none" stroke="#515AA3" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="56" y="32" fill="#363B74" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">周压力</text>
+      </g>
+      <g transform="translate(172 0)">
+        <rect width="158" height="50" rx="25" fill="#FFFFFF" opacity="0.94"/>
+        <circle cx="25" cy="25" r="12" fill="none" stroke="#2F8C78" stroke-width="2.5"/>
+        <circle cx="25" cy="25" r="5" fill="#2F8C78"/>
+        <text x="49" y="32" fill="#285F54" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">正念练习</text>
+      </g>
+      <g transform="translate(344 0)">
+        <rect width="158" height="50" rx="25" fill="#FFFFFF" opacity="0.94"/>
+        <path d="M25 11l12 5v9c0 8-5 13-12 17-7-4-12-9-12-17v-9l12-5Z" fill="#A77B00"/>
+        <path d="M19.5 25l4 4 8-10" fill="none" stroke="#FFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="49" y="32" fill="#6E5508" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17">本地优先</text>
+      </g>
+    </g>
+
+    <text x="0" y="413" fill="#656673" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18">不注册 · 不上传 · 不按天催打卡</text>
+  </g>
+
+  <g transform="translate(686 48)" filter="url(#shadow)">
+    <rect width="446" height="444" rx="36" fill="#FFFFFF"/>
+
+    <g transform="translate(28 28)">
+      <rect width="390" height="174" rx="25" fill="#F5F2E9"/>
+      <text x="24" y="38" fill="#5E5F69" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15">本周压力</text>
+      <text x="24" y="105" fill="#171820" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="58" font-weight="700">5.0</text>
+      <text x="126" y="105" fill="#5E5F69" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="18">/ 10</text>
+      <rect x="268" y="61" width="96" height="42" rx="21" fill="#A77B00"/>
+      <text x="316" y="88" text-anchor="middle" fill="#FFFFFF" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="15" font-weight="600">需要关照</text>
+      <rect x="24" y="133" width="340" height="12" rx="6" fill="#DDDCD8"/>
+      <rect x="24" y="133" width="170" height="12" rx="6" fill="url(#pressure)"/>
+    </g>
+
+    <g transform="translate(28 218)">
+      <rect width="226" height="198" rx="25" fill="#F3F3FB"/>
+      <text x="20" y="36" fill="#171820" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17" font-weight="600">一周四次</text>
+      <text x="20" y="61" fill="#747580" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="13">一 · 三 · 五 · 日</text>
+      <g transform="translate(20 82)">
+        <circle cx="22" cy="22" r="22" fill="#D8DAFF"/>
+        <path d="M13 22l6 6 12-15" fill="none" stroke="#515AA3" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="76" cy="22" r="22" fill="#E8E8EF"/>
+        <circle cx="130" cy="22" r="22" fill="#E8E8EF"/>
+        <circle cx="184" cy="22" r="22" fill="#E8E8EF"/>
+      </g>
+      <path d="M20 156C52 144 65 166 92 151s43-4 60-16 31-6 54-22" fill="none" stroke="#515AA3" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <g transform="translate(270 218)">
+      <rect width="148" height="198" rx="25" fill="#EAF7F3"/>
+      <circle cx="74" cy="69" r="42" fill="#CFECE4"/>
+      <circle cx="74" cy="69" r="29" fill="#A8DCCF"/>
+      <circle cx="74" cy="69" r="15" fill="url(#practice)"/>
+      <path d="M43 135c9-11 18-16 31-16s22 5 31 16" fill="none" stroke="#2F8C78" stroke-width="4" stroke-linecap="round"/>
+      <text x="74" y="165" text-anchor="middle" fill="#285F54" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="17" font-weight="600">留一点安静</text>
+      <text x="74" y="187" text-anchor="middle" fill="#5E7D75" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="12">手机暂时放下</text>
+    </g>
+  </g>
+</svg>
