@@ -1,7 +1,7 @@
 package com.example.neurotrack.ui
 
 import android.app.Application
-import android.content.Context
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -9,51 +9,81 @@ import androidx.lifecycle.viewModelScope
 import com.example.neurotrack.AppSettings
 import com.example.neurotrack.NeuroTrackApplication
 import com.example.neurotrack.SettingsStore
-import com.example.neurotrack.background.LogExporter
-import com.example.neurotrack.background.NeuroWorkScheduler
-import com.example.neurotrack.background.NotificationHelper
-import com.example.neurotrack.background.SleepRawDataExporter
+import com.example.neurotrack.background.MindfulnessScheduler
 import com.example.neurotrack.data.AssessmentRecordEntity
+import com.example.neurotrack.data.MindfulnessSessionEntity
 import com.example.neurotrack.data.NeuroRepository
-import com.example.neurotrack.data.toDomainAssessment
-import com.example.neurotrack.data.toDomainSleepRecord
-import com.example.neurotrack.domain.SleepRecord
-import com.example.neurotrack.domain.StressCalculator
+import com.example.neurotrack.data.toDomain
+import com.example.neurotrack.domain.MindfulnessSchedule
+import com.example.neurotrack.domain.MindfulnessSessionRecord
+import com.example.neurotrack.domain.MindfulnessSessionStatus
+import com.example.neurotrack.mindfulness.MindfulnessAudioPlayer
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import kotlin.math.ceil
 
 data class NeuroTrackUiState(
+    val today: LocalDate = LocalDate.now(),
     val assessments: List<AssessmentHistoryItem> = emptyList(),
-    val sleepRecords: List<SleepRecord> = emptyList(),
+    val sessions: List<MindfulnessSessionRecord> = emptyList(),
     val status: StatusDisplayModel = StatusDisplayModel.empty(),
 )
+
+data class MindfulnessSessionUiState(
+    val active: Boolean = false,
+    val remainingSeconds: Int = 0,
+    val totalSeconds: Int = 0,
+    val lastResult: MindfulnessSessionStatus? = null,
+) {
+    val progress: Float
+        get() = if (totalSeconds == 0) 0f else 1f - remainingSeconds.toFloat() / totalSeconds
+}
 
 class NeuroTrackViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as NeuroTrackApplication
     private val repository: NeuroRepository = app.container.repository
     private val settingsStore: SettingsStore = app.container.settingsStore
-    private val _latestSubmission = MutableStateFlow<AssessmentSubmissionDisplay?>(null)
+    private val audioPlayer = MindfulnessAudioPlayer()
+    private val _latestSubmission = MutableStateFlow<AssessmentHistoryItem?>(null)
+    private val _session = MutableStateFlow(MindfulnessSessionUiState())
+    private val _clock = MutableStateFlow(LocalDateTime.now())
+    private var sessionId: Long? = null
+    private var sessionJob: Job? = null
+    private var sessionStarting = false
 
     val settings: StateFlow<AppSettings> = settingsStore.settings
-    val latestSubmission: StateFlow<AssessmentSubmissionDisplay?> = _latestSubmission
+    val latestSubmission: StateFlow<AssessmentHistoryItem?> = _latestSubmission.asStateFlow()
+    val session: StateFlow<MindfulnessSessionUiState> = _session.asStateFlow()
 
     val uiState: StateFlow<NeuroTrackUiState> = combine(
         repository.assessmentHistory,
-        repository.observeSleepRecords(LocalDate.now().minusDays(31).toEpochDay()),
-    ) { assessments, sleepRecords ->
-        val domainAssessments = assessments.map { it.toDomainAssessment() }
-        val domainSleepRecords = sleepRecords.map { it.toDomainSleepRecord() }
+        repository.mindfulnessHistory,
+        settingsStore.settings,
+        _clock,
+    ) { assessments, sessions, settings, now ->
         NeuroTrackUiState(
-            assessments = assessments.map { it.toHistoryItem() },
-            sleepRecords = domainSleepRecords,
+            today = now.toLocalDate(),
+            assessments = assessments.map(AssessmentRecordEntity::toHistoryItem),
+            sessions = sessions.map(MindfulnessSessionEntity::toDomain),
             status = buildStatusDisplayModel(
-                assessments = domainAssessments,
-                sleepRecords = domainSleepRecords,
+                assessments = assessments.map { it.toDomain() },
+                sessions = sessions.map { it.toDomain() },
+                today = now.toLocalDate(),
+                dueThroughDate = dueThroughDate(
+                    now = now,
+                    reminderHour = settings.reminderHour,
+                    reminderMinute = settings.reminderMinute,
+                ),
             ),
         )
     }.stateIn(
@@ -64,25 +94,9 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
 
     fun submitAssessment(answers: List<Int>) {
         viewModelScope.launch {
-            val record = repository.submitAssessment(answers)
-            _latestSubmission.value = AssessmentSubmissionDisplay(
-                id = record.id,
-                totalScore = record.totalScore,
-            )
-
-            val currentState = uiState.value
-            val stress = StressCalculator.calculate(
-                assessments = listOf(record.toDomainAssessment()) +
-                    currentState.assessments
-                        .filterNot { it.id == record.id }
-                        .map { it.toDomainAssessment() },
-                sleepRecords = currentState.sleepRecords,
-            )
-            val score = stress.score
-            if (score != null && score > 5.0) {
-                NotificationHelper.showStressWarning(getApplication(), score)
-                repository.log("WARN", "StressAlert", "Stress score exceeded threshold: $score")
-            }
+            val monday = MindfulnessSchedule.weekStart(LocalDate.now())
+            val record = repository.submitAssessment(monday.toEpochDay(), answers)
+            _latestSubmission.value = record.toHistoryItem()
         }
     }
 
@@ -90,36 +104,95 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
         _latestSubmission.value = null
     }
 
-    fun setLanguage(languageTag: String) {
-        settingsStore.setLanguage(languageTag)
-    }
-
-    fun setThemeMode(themeMode: String) {
-        settingsStore.setThemeMode(themeMode)
-    }
-
-    fun setReminder(dayOfWeek: Int, hour: Int) {
-        settingsStore.setReminder(dayOfWeek, hour)
-        NeuroWorkScheduler.scheduleAssessmentReminder(getApplication(), settingsStore.settings.value)
+    fun startMindfulness(durationMinutes: Int) {
+        if (
+            _session.value.active ||
+            sessionStarting ||
+            durationMinutes !in setOf(5, 10, 15) ||
+            !MindfulnessSchedule.isPracticeDay(LocalDate.now())
+        ) return
+        sessionStarting = true
         viewModelScope.launch {
-            repository.log("INFO", "Settings", "Reminder changed day=$dayOfWeek hour=$hour")
+            try {
+                val record = repository.startMindfulness(durationMinutes)
+                sessionId = record.id
+                val totalSeconds = durationMinutes * 60
+                _session.value = MindfulnessSessionUiState(
+                    active = true,
+                    remainingSeconds = totalSeconds,
+                    totalSeconds = totalSeconds,
+                )
+                try {
+                    audioPlayer.start()
+                } catch (_: RuntimeException) {
+                    finishMindfulness(MindfulnessSessionStatus.INTERRUPTED)
+                    return@launch
+                }
+                val finishAt = SystemClock.elapsedRealtime() + totalSeconds * 1_000L
+                sessionJob = launch {
+                    while (_session.value.active) {
+                        val remaining = ceil((finishAt - SystemClock.elapsedRealtime()) / 1_000.0)
+                            .toInt()
+                            .coerceAtLeast(0)
+                        _session.value = _session.value.copy(remainingSeconds = remaining)
+                        if (remaining == 0) {
+                            viewModelScope.launch {
+                                finishMindfulness(MindfulnessSessionStatus.COMPLETED)
+                            }
+                            break
+                        }
+                        delay(250)
+                    }
+                }
+            } finally {
+                sessionStarting = false
+            }
         }
     }
 
-    fun exportLogs(context: Context) {
-        viewModelScope.launch {
-            val intent = LogExporter.createShareIntent(context, repository)
-            context.startActivity(intent)
-            repository.log("INFO", "Logs", "Log export shared")
+    fun abandonMindfulness() {
+        if (_session.value.active) {
+            viewModelScope.launch { finishMindfulness(MindfulnessSessionStatus.ABANDONED) }
         }
     }
 
-    fun exportSleepRawData(context: Context, startMillis: Long, endMillis: Long) {
-        viewModelScope.launch {
-            val intent = SleepRawDataExporter.createShareIntent(context, startMillis, endMillis)
-            context.startActivity(intent)
-            repository.log("INFO", "SleepRawExport", "Sleep raw data export shared start=$startMillis end=$endMillis")
+    fun interruptMindfulness() {
+        if (_session.value.active) {
+            viewModelScope.launch { finishMindfulness(MindfulnessSessionStatus.INTERRUPTED) }
         }
+    }
+
+    fun clearSessionResult() {
+        if (!_session.value.active) _session.value = MindfulnessSessionUiState()
+    }
+
+    fun setLanguage(value: String) = settingsStore.setLanguage(value)
+
+    fun setThemeMode(value: String) = settingsStore.setThemeMode(value)
+
+    fun setReminderTime(hour: Int, minute: Int) {
+        settingsStore.setReminderTime(hour, minute)
+        MindfulnessScheduler.schedule(getApplication(), settingsStore.settings.value)
+    }
+
+    private suspend fun finishMindfulness(status: MindfulnessSessionStatus) {
+        val id = sessionId ?: return
+        sessionId = null
+        val ticker = sessionJob
+        sessionJob = null
+        ticker?.cancel()
+        audioPlayer.stop()
+        repository.finishMindfulness(id, status)
+        _session.value = _session.value.copy(
+            active = false,
+            remainingSeconds = if (status == MindfulnessSessionStatus.COMPLETED) 0 else _session.value.remainingSeconds,
+            lastResult = status,
+        )
+    }
+
+    override fun onCleared() {
+        audioPlayer.stop()
+        super.onCleared()
     }
 
     companion object {
@@ -127,25 +200,34 @@ class NeuroTrackViewModel(application: Application) : AndroidViewModel(applicati
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    if (modelClass.isAssignableFrom(NeuroTrackViewModel::class.java)) {
-                        return NeuroTrackViewModel(application) as T
-                    }
-                    error("Unknown ViewModel class ${modelClass.name}")
+                    check(modelClass.isAssignableFrom(NeuroTrackViewModel::class.java))
+                    return NeuroTrackViewModel(application) as T
                 }
             }
     }
+
+    init {
+        viewModelScope.launch {
+            while (true) {
+                delay(30_000)
+                _clock.value = LocalDateTime.now()
+            }
+        }
+    }
 }
 
-private fun AssessmentRecordEntity.toHistoryItem(): AssessmentHistoryItem =
-    AssessmentHistoryItem(
-        id = id,
-        createdAtMillis = createdAtMillis,
-        answersCsv = answersCsv,
-        totalScore = totalScore,
-    )
+private fun AssessmentRecordEntity.toHistoryItem() = AssessmentHistoryItem(
+    id = id,
+    createdAtMillis = createdAtMillis,
+    totalScore = totalScore,
+)
 
-private fun AssessmentHistoryItem.toDomainAssessment() =
-    com.example.neurotrack.domain.AssessmentScoreRecord(
-        createdAtMillis = createdAtMillis,
-        totalScore = totalScore,
-    )
+internal fun dueThroughDate(
+    now: LocalDateTime,
+    reminderHour: Int,
+    reminderMinute: Int,
+): LocalDate {
+    val reminderTime = LocalTime.of(reminderHour.coerceIn(0, 23), reminderMinute.coerceIn(0, 59))
+    return if (now.toLocalTime().isBefore(reminderTime)) now.toLocalDate().minusDays(1)
+    else now.toLocalDate()
+}

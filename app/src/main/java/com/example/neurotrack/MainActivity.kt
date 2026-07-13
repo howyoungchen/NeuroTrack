@@ -9,55 +9,52 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import com.example.neurotrack.background.EXTRA_DESTINATION
-import com.example.neurotrack.background.NeuroWorkScheduler
 import com.example.neurotrack.ui.NeuroTrackRoot
 import com.example.neurotrack.ui.NeuroTrackViewModel
 import com.example.neurotrack.ui.destinationToScreen
 import com.example.neurotrack.ui.theme.NeuroTrackTheme
 
 class MainActivity : ComponentActivity() {
-    override fun onResume() {
-        super.onResume()
-        NeuroWorkScheduler.refreshSleepAnalysis(this)
-    }
+    private lateinit var neuroTrackViewModel: NeuroTrackViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        neuroTrackViewModel = ViewModelProvider(
+            this,
+            NeuroTrackViewModel.factory(application),
+        )[NeuroTrackViewModel::class.java]
         val initialScreen = destinationToScreen(intent?.getStringExtra(EXTRA_DESTINATION))
         setContent {
-            val viewModel: NeuroTrackViewModel = viewModel(
-                factory = NeuroTrackViewModel.factory(application),
-            )
-            val settings by viewModel.settings.collectAsState()
-            val systemDarkTheme = isSystemInDarkTheme()
+            val settings by neuroTrackViewModel.settings.collectAsState()
+            val systemDark = isSystemInDarkTheme()
             val darkTheme = when (settings.themeMode) {
                 SettingsStore.THEME_LIGHT -> false
                 SettingsStore.THEME_DARK -> true
-                else -> systemDarkTheme
+                else -> systemDark
             }
             SideEffect {
                 enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.auto(
-                        lightScrim = android.graphics.Color.TRANSPARENT,
-                        darkScrim = android.graphics.Color.TRANSPARENT,
-                        detectDarkMode = { darkTheme },
-                    ),
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                    ) { darkTheme },
                     navigationBarStyle = SystemBarStyle.auto(
-                        lightScrim = android.graphics.Color.TRANSPARENT,
-                        darkScrim = android.graphics.Color.TRANSPARENT,
-                        detectDarkMode = { darkTheme },
-                    ),
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                    ) { darkTheme },
                 )
             }
             NeuroTrackTheme(darkTheme = darkTheme) {
-                NeuroTrackRoot(
-                    viewModel = viewModel,
-                    initialScreen = initialScreen,
-                )
+                NeuroTrackRoot(neuroTrackViewModel, initialScreen)
             }
         }
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) neuroTrackViewModel.interruptMindfulness()
+        super.onStop()
     }
 }

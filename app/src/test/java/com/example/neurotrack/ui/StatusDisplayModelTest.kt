@@ -1,120 +1,69 @@
 package com.example.neurotrack.ui
 
-import com.example.neurotrack.domain.SleepRecord
+import com.example.neurotrack.domain.MindfulnessSessionRecord
+import com.example.neurotrack.domain.MindfulnessSessionStatus
+import com.example.neurotrack.domain.WeeklyAssessmentRecord
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
-import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.ZoneId
 
 class StatusDisplayModelTest {
-    private val zoneId = ZoneId.of("Asia/Shanghai")
-    private val today = LocalDate.of(2026, 7, 4)
+    private val zoneId = ZoneId.of("UTC")
+    private val today = LocalDate.of(2026, 7, 15)
+    private val weekStart = LocalDate.of(2026, 7, 13)
 
     @Test
-    fun buildStatusDisplayModel_usesMostRecentUsableSleepRecordForLatestCard() {
-        val result = buildStatusDisplayModel(
-            assessments = emptyList(),
-            sleepRecords = listOf(
-                sleepRecord(dateEpochDay = today.minusDays(1).toEpochDay(), durationMinutes = 480),
-                sleepRecord(dateEpochDay = today.toEpochDay(), durationMinutes = 450),
+    fun buildStatusDisplayModel_exposesOnlyWeeklyCurrentAndTrend() {
+        val model = buildStatusDisplayModel(
+            assessments = listOf(
+                WeeklyAssessmentRecord(millis(weekStart.plusDays(1)), 15),
             ),
+            sessions = listOf(completedSession(weekStart)),
             today = today,
             zoneId = zoneId,
         )
 
-        assertEquals(7.5, result.latestSleep.durationHours ?: -1.0, 0.0001)
-        assertEquals("23:00", result.latestSleep.bedtimeText)
-        assertEquals("06:30", result.latestSleep.wakeTimeText)
+        assertEquals(1, model.current.completedPractices)
+        assertEquals(8, model.trend.size)
+        assertEquals(weekStart, model.trend.last().weekStart)
     }
 
     @Test
-    fun buildStatusDisplayModel_ignoresMissingZeroDurationAndFutureSleepRecords() {
-        val result = buildStatusDisplayModel(
+    fun buildStatusDisplayModel_withoutReflectionKeepsScoreMissing() {
+        val model = buildStatusDisplayModel(
             assessments = emptyList(),
-            sleepRecords = listOf(
-                sleepRecord(dateEpochDay = today.plusDays(1).toEpochDay(), durationMinutes = 480),
-                sleepRecord(dateEpochDay = today.toEpochDay(), durationMinutes = 0),
-                sleepRecord(dateEpochDay = today.minusDays(1).toEpochDay(), durationMinutes = 460, isMissing = true),
-            ),
+            sessions = listOf(completedSession(weekStart)),
             today = today,
             zoneId = zoneId,
         )
 
-        assertFalse(result.latestSleep.hasData)
-        assertNull(result.latestSleep.durationHours)
+        assertNull(model.current.score)
     }
 
     @Test
-    fun buildStatusDisplayModel_buildsWeekSleepPointsWithGaps() {
-        val result = buildStatusDisplayModel(
-            assessments = emptyList(),
-            sleepRecords = listOf(
-                sleepRecord(dateEpochDay = today.minusDays(6).toEpochDay(), durationMinutes = 420),
-                sleepRecord(dateEpochDay = today.toEpochDay(), durationMinutes = 480),
-            ),
-            today = today,
-            zoneId = zoneId,
-        )
+    fun dueThroughDate_waitsUntilConfiguredReminderTime() {
+        val morning = LocalDateTime.of(2026, 7, 15, 8, 0)
+        val evening = LocalDateTime.of(2026, 7, 15, 20, 30)
 
-        assertEquals(7, result.weekSleep.points.size)
-        assertEquals(420f, result.weekSleep.points.first().durationMinutes)
-        assertEquals(480f, result.weekSleep.points.last().durationMinutes)
-        assertTrue(result.weekSleep.points.drop(1).dropLast(1).all { it.durationMinutes == null })
-        assertTrue(result.weekSleep.chartLabels.first() is SleepChartLabel.Weekday)
+        assertEquals(LocalDate.of(2026, 7, 14), dueThroughDate(morning, 20, 0))
+        assertEquals(LocalDate.of(2026, 7, 15), dueThroughDate(evening, 20, 0))
     }
 
     @Test
-    fun buildStatusDisplayModel_mapsNoSleepInsight() {
-        val result = buildStatusDisplayModel(
-            assessments = emptyList(),
-            sleepRecords = emptyList(),
-            today = today,
-            zoneId = zoneId,
-        )
-
-        assertEquals(listOf(StatusInsight.NO_SLEEP), result.insights)
+    fun formatWeekLabel_isLocaleNeutral() {
+        assertEquals("7/13", formatWeekLabel(LocalDate.of(2026, 7, 13)))
     }
 
-    @Test
-    fun buildStatusDisplayModel_buildsPressureAndMonthChartLabels() {
-        val result = buildStatusDisplayModel(
-            assessments = emptyList(),
-            sleepRecords = emptyList(),
-            today = today,
-            zoneId = zoneId,
-        )
+    private fun completedSession(date: LocalDate) = MindfulnessSessionRecord(
+        startedAtMillis = millis(date),
+        endedAtMillis = millis(date) + 300_000,
+        plannedDurationMinutes = 5,
+        status = MindfulnessSessionStatus.COMPLETED,
+    )
 
-        assertEquals(listOf("6/5", "6/20", "7/4"), result.pressureTrend.chartLabels)
-        assertEquals(
-            listOf("6/5", "6/12", "6/19", "6/26", "7/3"),
-            result.monthSleep.chartLabels.map { (it as SleepChartLabel.Text).value },
-        )
-    }
-
-    private fun sleepRecord(
-        dateEpochDay: Long,
-        durationMinutes: Int,
-        isMissing: Boolean = false,
-    ): SleepRecord {
-        val date = LocalDate.ofEpochDay(dateEpochDay)
-        return SleepRecord(
-            dateEpochDay = dateEpochDay,
-            sleepStartMillis = millis(date, LocalTime.of(23, 0)),
-            sleepEndMillis = millis(date.plusDays(1), LocalTime.of(6, 30)),
-            durationMinutes = durationMinutes,
-            wakeUpCount = 0,
-            isMissing = isMissing,
-            createdAtMillis = millis(date.plusDays(1), LocalTime.NOON),
-        )
-    }
-
-    private fun millis(date: LocalDate, time: LocalTime): Long =
-        date.atTime(time)
-            .atZone(zoneId)
-            .toInstant()
-            .toEpochMilli()
+    private fun millis(date: LocalDate): Long =
+        date.atTime(20, 0).atZone(zoneId).toInstant().toEpochMilli()
 }

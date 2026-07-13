@@ -22,11 +22,11 @@ Use idiomatic Kotlin with 4-space indentation and trailing commas for multi-line
 
 ## Testing Guidelines
 
-Use JUnit 4 for local tests. Name test files after the subject, such as `SleepAnalyzerTest.kt`, and use descriptive test methods like `analyze_marksMissingWhenThereAreNoScreenEvents`. Add local tests for pure analysis, formatting, and selection logic; use instrumented tests for Android framework behavior. Run `:app:testDebugUnitTest` before every PR, plus lint and Kotlin compilation for UI or build changes.
+Use JUnit 4 for local tests. Name test files after the subject, such as `WeeklyStressCalculatorTest.kt`, and use descriptive test methods like `calculate_missingPracticesRaiseWeeklyPressure`. Add local tests for pure analysis, formatting, and selection logic; use instrumented tests for Android framework behavior. Run `:app:testDebugUnitTest` before every PR, plus lint and Kotlin compilation for UI or build changes.
 
 ## Commit & Pull Request Guidelines
 
-The current history only establishes `Initial commit`; use short, imperative subjects such as `Add sleep gap analyzer tests`. PRs should explain the user-facing change, list validation commands run, link related issues, and include screenshots for visible UI changes. Mention updates to both English and Chinese strings when copy changes.
+Use short, imperative subjects such as `Add weekly pressure tests`. PRs should explain the user-facing change, list validation commands run, link related issues, and include screenshots for visible UI changes. Mention updates to both English and Chinese strings when copy changes.
 
 ## Privacy & Configuration Tips
 

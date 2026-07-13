@@ -1,149 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NeuroTrack</string>
-    <string name="app_name_zh">心迹</string>
-    <string name="nav_assessment">自测</string>
     <string name="nav_status">状态</string>
+    <string name="nav_practice">练习</string>
     <string name="nav_settings">设置</string>
 
-    <string name="notification_channel_warning">压力告警</string>
-    <string name="notification_channel_warning_desc">当压力等级超过 5 分时发送提醒。</string>
-    <string name="notification_channel_reminder">自测提醒</string>
-    <string name="notification_channel_reminder_desc">当最近 7 天没有自测时提醒完成评测。</string>
-    <string name="stress_warning_notification_title">压力等级偏高</string>
-    <string name="stress_warning_notification_text">当前压力等级为 %1$.1f/10，建议尽快安排休息。</string>
-    <string name="reminder_notification_title">该做一次状态自测了</string>
-    <string name="reminder_notification_text">最近一周还没有记录，花一分钟了解当前状态。</string>
-    <string name="share_logs_title">导出心迹日志</string>
-    <string name="share_sleep_raw_data_title">导出睡眠 raw 数据</string>
+    <string name="status_title">这一周，慢慢看见自己</string>
+    <string name="status_subtitle">压力不是一天的结论。这里仅保留最近几周的变化和本周状态。</string>
+    <string name="status_current_week">本周压力</string>
+    <string name="status_score_format">%1$.1f</string>
+    <string name="status_out_of_ten">/ 10</string>
+    <string name="status_band_low">平稳</string>
+    <string name="status_band_medium">需要关照</string>
+    <string name="status_band_high">偏高</string>
+    <string name="status_no_score">完成本周回顾后生成压力分数</string>
+    <string name="status_recent_trend">最近压力变化</string>
+    <string name="status_recent_trend_hint">每个点代表一周，正念完成情况会与周回顾一起计入。</string>
+    <string name="status_no_trend">完成第一次周回顾后，趋势会从这里开始。</string>
 
-    <string name="assessment_title">过去一周自测</string>
-    <string name="assessment_subtitle">一次只关注一个问题，根据过去一周的真实感受作答。</string>
-    <string name="assessment_progress">%1$d/%2$d 已回答</string>
-    <string name="assessment_percent_format">%1$d%%</string>
-    <string name="assessment_question_number">第 %1$d 题</string>
+    <string name="practice_title">练习与回顾</string>
+    <string name="practice_subtitle">用十个问题理解过去一周，再用一次安静练习把注意力带回当下。</string>
+    <string name="practice_weekly_rhythm">本周节奏</string>
+    <string name="practice_completed_format">已完成 %1$d / 4 次正念</string>
+    <string name="practice_schedule">周一 · 周三 · 周五 · 周日</string>
+    <string name="practice_day_mon">一</string>
+    <string name="practice_day_wed">三</string>
+    <string name="practice_day_fri">五</string>
+    <string name="practice_day_sun">日</string>
+    <string name="weekly_review_title">本周回顾</string>
+    <string name="weekly_review_desc">从睡眠、注意力、关系、环境与身体等角度，完整回看过去一周。</string>
+    <string name="weekly_review_start">开始回顾</string>
+    <string name="weekly_review_again">重新回顾</string>
+    <string name="weekly_review_done">本周已完成</string>
+    <string name="mindfulness_title">正念练习</string>
+    <string name="mindfulness_desc">开始后会播放舒缓音乐。离开应用或切换到其他应用，本次练习会被判定为中断。</string>
+    <string name="mindfulness_duration">选择时长</string>
+    <string name="mindfulness_minutes">%1$d 分钟</string>
+    <string name="mindfulness_start">开始正念</string>
+    <string name="mindfulness_off_day">今天不是计划练习日；下一次请在周一、三、五或日开始。</string>
+
+    <string name="assessment_title">过去一周回顾</string>
+    <string name="assessment_subtitle">没有标准答案。选择最接近过去七天真实状态的一项。</string>
+    <string name="assessment_progress">第 %1$d / %2$d 题</string>
     <string name="assessment_previous">上一题</string>
     <string name="assessment_next">下一题</string>
-    <string name="assessment_submit">提交自测</string>
-    <string name="assessment_result_title">本次得分 %1$d/30</string>
-    <string name="assessment_feedback_low">当前压力较低，继续保持规律作息和温和活动。</string>
-    <string name="assessment_feedback_medium">近期压力有一定累积，建议安排休息并观察睡眠变化。</string>
-    <string name="assessment_feedback_high">压力水平偏高，请减少负荷；若症状严重或持续，请联系专业人士。</string>
-    <string name="assessment_history_title">历史记录</string>
-    <string name="assessment_history_subtitle">每次记录都会参与状态趋势计算。</string>
-    <string name="assessment_history_empty">还没有自测记录。</string>
-    <string name="assessment_history_item">%1$s · %2$d/30</string>
-    <string name="assessment_result_close">知道了</string>
+    <string name="assessment_submit">完成回顾</string>
+    <string name="assessment_result_title">本周回顾已记录</string>
+    <string name="assessment_result_body">你的回答会和本周正念完成情况一起生成周压力分数。</string>
+    <string name="common_done">知道了</string>
 
     <string-array name="assessment_questions">
-        <item>感到紧张、焦虑或烦躁</item>
-        <item>无法停止或控制担忧</item>
-        <item>对各种事情过度担心</item>
-        <item>难以放松</item>
-        <item>坐立不安、难以静坐</item>
-        <item>容易恼怒或易被激惹</item>
-        <item>感到害怕，仿佛将有可怕的事发生</item>
-        <item>入睡困难或睡眠质量差</item>
-        <item>疲乏、精力不足</item>
-        <item>躯体不适，如心悸、手抖、出汗、头痛</item>
+        <item>回看过去一周，你如何评价自己的睡眠质量？</item>
+        <item>你是否常拿起手机，却在多个应用之间来回切换？</item>
+        <item>遇到不同观点或意外变化时，你通常如何回应？</item>
+        <item>这一周是否发生了让你明显承压的事件？</item>
+        <item>你对身边环境与自身整理的状态如何？</item>
+        <item>这一周的工作或学习状态如何？</item>
+        <item>你与家人朋友的语音、视频或见面联系如何？</item>
+        <item>你的身体是否出现持续紧绷、头痛、心悸或胃口变化？</item>
+        <item>你是否还能为兴趣、运动或单纯休息留出时间？</item>
+        <item>面对尚未完成的事情，你能否停下来而不反复担忧？</item>
     </string-array>
-    <string-array name="likert_options">
-        <item>完全没有</item>
-        <item>有几天</item>
-        <item>一半以上时间</item>
-        <item>几乎每天</item>
-    </string-array>
+    <string-array name="assessment_sleep_options"><item>非常好，醒来有恢复感</item><item>还行，偶尔受影响</item><item>想改变，常感到疲惫</item><item>急需改变，明显影响生活</item></string-array>
+    <string-array name="assessment_phone_options"><item>几乎没有，使用目的明确</item><item>偶尔会，但能很快停下</item><item>经常无意识切换</item><item>频繁切换且难以控制</item></string-array>
+    <string-array name="assessment_views_options"><item>能理解差异并保持开放</item><item>有波动，但可以沟通</item><item>容易烦躁或争辩</item><item>明显排斥，之后仍反复在意</item></string-array>
+    <string-array name="assessment_events_options"><item>没有重大压力事件</item><item>有小波折，已经处理</item><item>有明显事件，仍在消化</item><item>事件重大，感到难以承受</item></string-array>
+    <string-array name="assessment_environment_options"><item>整洁有序，也照顾了自己</item><item>基本稳定，偶有凌乱</item><item>常无力整理或照顾自己</item><item>环境与个人状态都很杂乱</item></string-array>
+    <string-array name="assessment_work_options"><item>专注、有节奏且有成就感</item><item>能推进，偶尔分心拖延</item><item>效率下降，常感到压迫</item><item>难以开始或维持基本任务</item></string-array>
+    <string-array name="assessment_relationship_options"><item>主动联系，并感到被支持</item><item>保持基本联系</item><item>减少联系，有些回避</item><item>明显回避或感到孤立</item></string-array>
+    <string-array name="assessment_body_options"><item>身体放松，没有明显不适</item><item>偶尔紧绷，休息后缓解</item><item>反复不适，影响注意力</item><item>持续明显不适，影响日常</item></string-array>
+    <string-array name="assessment_recovery_options"><item>能稳定安排恢复时间</item><item>偶尔安排，但不够规律</item><item>很少有真正放松的时间</item><item>完全停不下来或失去兴趣</item></string-array>
+    <string-array name="assessment_worry_options"><item>能接受暂时未完成并休息</item><item>偶尔惦记，但能放下</item><item>常反复思考，难以停下</item><item>持续担忧，几乎无法放松</item></string-array>
 
-    <string name="status_title">当前状态</string>
-    <string name="status_subtitle">把压力与睡眠放在同一张图景里，慢慢理解自己的节奏。</string>
-    <string name="status_no_data">完成首次自测后，这里会生成你的状态概览。</string>
-    <string name="status_go_assessment">开始自测</string>
-    <string name="status_stress_level">压力等级</string>
-    <string name="status_stress_format">%1$.1f</string>
-    <string name="status_band_low">平稳</string>
-    <string name="status_band_medium">需关注</string>
-    <string name="status_band_high">偏高</string>
-    <string name="status_stress_low">状态相对平稳，继续关注睡眠和日常节奏。</string>
-    <string name="status_stress_medium">压力处于中等水平，建议主动安排恢复时间。</string>
-    <string name="status_stress_high">压力偏高，请降低负荷；如有明显不适请及时就医。</string>
-    <string name="status_latest_assessment">最新自测</string>
-    <string name="status_trend_assessment">月度趋势</string>
-    <string name="status_sleep_penalty">睡眠扣分</string>
-    <string name="status_pressure_scale">压力等级 0–10</string>
-    <string name="status_pressure_scale_hint">低 · 中 · 高</string>
-    <string name="status_pressure_month">近一个月压力变化</string>
-    <string name="status_sleep_latest">最近一次睡眠</string>
-    <string name="status_sleep_duration">睡眠时长</string>
-    <string name="status_bedtime">入睡时间</string>
-    <string name="status_wake_time">起床时间</string>
-    <string name="status_sleep_week">近一周睡眠状态</string>
-    <string name="status_sleep_month">近一个月睡眠状态</string>
-    <string name="status_sleep_window">入睡与起床时间</string>
-    <string name="status_insights">趋势洞察</string>
-    <string name="status_sleep_section">最近睡眠</string>
-    <string name="status_sleep_section_subtitle">最近一次可用的睡眠记录。</string>
-    <string name="status_trends_section">趋势与节奏</string>
-    <string name="status_trends_section_subtitle">用更长时间范围识别变化，而不是被单日波动影响。</string>
-    <string name="status_insight_no_sleep">睡眠数据不足，授予使用情况访问权限后会自动生成。</string>
-    <string name="status_insight_later">近 7 天入睡时间呈变晚趋势。</string>
-    <string name="status_insight_irregular">入睡时间波动较大，作息不够稳定。</string>
-    <string name="status_insight_short">近 7 天平均睡眠时长不足。</string>
-    <string name="status_insight_drop">最近一次睡眠时长较前几天明显下降。</string>
-    <string name="status_insight_late_average">平均入睡时间晚于凌晨 1 点。</string>
-    <string name="status_insight_stable">近 7 天睡眠趋势暂无明显风险信号。</string>
-    <string name="status_hours_format">%1$.1f 小时</string>
-    <string name="status_score_format">%1$.1f/10</string>
-    <string name="status_missing">暂无</string>
-    <string name="chart_empty">暂无可绘制数据</string>
+    <string name="session_focus_title">把这一段时间留给自己</string>
+    <string name="session_focus_hint">系统会固定当前屏幕。离开应用会中断本次记录。</string>
+    <string name="session_music">舒缓音乐正在播放</string>
+    <string name="session_time_format">%1$02d:%2$02d</string>
+    <string name="session_end_early">提前结束</string>
+    <string name="session_completed">练习完成，感谢你把时间留给自己。</string>
+    <string name="session_interrupted">检测到你离开了应用，本次练习未完成。</string>
+    <string name="session_abandoned">本次练习已提前结束，不计入本周完成次数。</string>
 
     <string name="settings_title">设置</string>
-    <string name="settings_subtitle">按你的习惯调整体验，并管理全部本地数据权限。</string>
-    <string name="settings_permissions">权限获取</string>
-    <string name="settings_about">关于</string>
+    <string name="settings_subtitle">只保留正念提醒所需的通知权限，其余体验完全在本地完成。</string>
+    <string name="settings_reminder">正念提醒</string>
+    <string name="settings_reminder_days">每周一、三、五、日提醒</string>
+    <string name="settings_reminder_time">提醒时间</string>
+    <string name="settings_permission">通知权限</string>
+    <string name="settings_permission_desc">仅用于在练习日提醒你做正念，不读取使用情况或位置。</string>
+    <string name="permission_granted">已允许</string>
+    <string name="permission_missing">去允许</string>
     <string name="settings_language">语言</string>
-    <string name="settings_theme">主题</string>
-    <string name="settings_reminder">评测提醒</string>
-    <string name="settings_logs">日志导出</string>
-    <string name="settings_exports">数据导出</string>
-    <string name="permission_notifications">通知权限</string>
-    <string name="permission_notifications_desc">用于发送每周自测提醒和压力过高警告。</string>
-    <string name="permission_usage_stats">使用情况访问权限</string>
-    <string name="permission_usage_stats_desc">用于回查过去 24 小时的屏幕交互事件，生成睡眠状态。</string>
-    <string name="permission_location">定位权限</string>
-    <string name="permission_location_desc">可选，用本地移动状态辅助判断起床边界；不保存原始位置轨迹。</string>
-    <string name="permission_battery">电池优化白名单</string>
-    <string name="permission_battery_desc">有助于让每日后台分析更稳定。</string>
-    <string name="permission_exact_alarm">精确闹钟</string>
-    <string name="permission_exact_alarm_desc">如系统要求，可用于提高提醒触达时间的准确性。</string>
-    <string name="permission_usage_desc">通过系统使用情况访问权限回查屏幕交互事件，反推过去 24 小时的清醒/睡眠状态。</string>
-    <string name="permission_granted">已授予</string>
-    <string name="permission_missing">未授予</string>
-    <string name="permission_refresh">刷新权限状态</string>
-    <string name="about_version">版本 %1$s</string>
-    <string name="about_license">许可证：个人与非商业使用</string>
-    <string name="about_project">项目地址：https://github.com/example/NeuroTrack</string>
-    <string name="disclaimer_title">免责声明</string>
-    <string name="disclaimer_body">本应用不构成医疗诊断或治疗建议，评估结果仅供参考。如有严重症状、持续恶化或自伤风险，请及时就医或联系当地紧急求助服务。</string>
+    <string name="settings_theme">外观</string>
     <string name="language_zh">中文</string>
     <string name="language_en">English</string>
-    <string name="theme_system">根据系统</string>
+    <string name="theme_system">跟随系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
-    <string name="reminder_day">星期</string>
-    <string name="reminder_hour">时间</string>
-    <string name="reminder_rule">仅当最近 7 天没有任何自测记录时发送通知。</string>
-    <string name="export_logs">导出日志</string>
-    <string name="export_sleep_raw_data">导出睡眠 raw 数据</string>
-    <string name="export_range_start">开始时间（yyyy-MM-dd HH:mm）</string>
-    <string name="export_range_end">结束时间（yyyy-MM-dd HH:mm）</string>
-    <string name="export_range_invalid">请输入有效时间，并确保结束时间晚于开始时间。</string>
+    <string name="settings_about">关于</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="disclaimer">NeuroTrack 仅用于自我观察与正念练习，不构成医疗诊断或治疗建议。如持续感到痛苦或有伤害自己的风险，请及时寻求专业帮助。</string>
 
-    <string-array name="weekdays">
-        <item>周一</item>
-        <item>周二</item>
-        <item>周三</item>
-        <item>周四</item>
-        <item>周五</item>
-        <item>周六</item>
-        <item>周日</item>
-    </string-array>
+    <string name="notification_channel_mindfulness">正念提醒</string>
+    <string name="notification_channel_mindfulness_desc">每周一、三、五、日的正念练习提醒。</string>
+    <string name="mindfulness_reminder_title">给自己留一段安静时间</string>
+    <string name="mindfulness_reminder_text">今天是正念练习日，准备好后开始一次专注练习。</string>
 </resources>

@@ -1,32 +1,18 @@
 package com.example.neurotrack.data
 
-import com.example.neurotrack.domain.AssessmentScoreRecord
-import com.example.neurotrack.domain.SleepRecord
+import com.example.neurotrack.domain.MindfulnessSessionRecord
+import com.example.neurotrack.domain.MindfulnessSessionStatus
+import com.example.neurotrack.domain.WeeklyAssessmentRecord
 
-fun AssessmentRecordEntity.toDomainAssessment(): AssessmentScoreRecord =
-    AssessmentScoreRecord(
-        createdAtMillis = createdAtMillis,
-        totalScore = totalScore,
-    )
+fun AssessmentRecordEntity.toDomain(): WeeklyAssessmentRecord =
+    WeeklyAssessmentRecord(createdAtMillis = createdAtMillis, totalScore = totalScore)
 
-fun SleepRecordEntity.toDomainSleepRecord(): SleepRecord =
-    SleepRecord(
-        dateEpochDay = dateEpochDay,
-        sleepStartMillis = sleepStartMillis,
-        sleepEndMillis = sleepEndMillis,
-        durationMinutes = durationMinutes,
-        wakeUpCount = wakeUpCount,
-        isMissing = isMissing,
-        createdAtMillis = createdAtMillis,
-    )
-
-fun SleepRecord.toEntity(): SleepRecordEntity =
-    SleepRecordEntity(
-        dateEpochDay = dateEpochDay,
-        sleepStartMillis = sleepStartMillis,
-        sleepEndMillis = sleepEndMillis,
-        durationMinutes = durationMinutes,
-        wakeUpCount = wakeUpCount,
-        isMissing = isMissing,
-        createdAtMillis = createdAtMillis,
+fun MindfulnessSessionEntity.toDomain(): MindfulnessSessionRecord =
+    MindfulnessSessionRecord(
+        id = id,
+        startedAtMillis = startedAtMillis,
+        endedAtMillis = endedAtMillis,
+        plannedDurationMinutes = plannedDurationMinutes,
+        status = runCatching { MindfulnessSessionStatus.valueOf(status) }
+            .getOrDefault(MindfulnessSessionStatus.INTERRUPTED),
     )
