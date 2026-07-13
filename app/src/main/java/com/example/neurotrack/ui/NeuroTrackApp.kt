@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.LocaleList
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -193,16 +194,29 @@ fun NeuroTrackRoot(viewModel: NeuroTrackViewModel, initialScreen: AppScreen = Ap
 }
 
 @Composable
-private fun LocalizedResources(languageTag: String, content: @Composable () -> Unit) {
+internal fun LocalizedResources(languageTag: String, content: @Composable () -> Unit) {
     val baseContext = LocalContext.current
     val configuration = LocalConfiguration.current
+    val activityResultRegistryOwner = LocalActivityResultRegistryOwner.current
     val localizedContext = remember(baseContext, configuration, languageTag) {
         val copy = Configuration(configuration)
         copy.setLocales(LocaleList(Locale.forLanguageTag(languageTag)))
         baseContext.createConfigurationContext(copy)
     }
-    CompositionLocalProvider(LocalContext provides localizedContext) {
+    val localizedContent: @Composable () -> Unit = {
         key(languageTag) { content() }
+    }
+    if (activityResultRegistryOwner == null) {
+        CompositionLocalProvider(LocalContext provides localizedContext) {
+            localizedContent()
+        }
+    } else {
+        CompositionLocalProvider(
+            LocalContext provides localizedContext,
+            LocalActivityResultRegistryOwner provides activityResultRegistryOwner,
+        ) {
+            localizedContent()
+        }
     }
 }
 

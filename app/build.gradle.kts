@@ -16,8 +16,8 @@ android {
         applicationId = "com.example.neurotrack"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.0"
+        versionCode = 7
+        versionName = "2.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
