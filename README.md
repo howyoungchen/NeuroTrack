@@ -39,6 +39,14 @@ These are real screens from the current development build on Android 16. Their c
   </tr>
 </table>
 
+## What makes it different
+
+NeuroTrack is shaped by lived, long-term use—not only by a product brief.
+
+- **Built from lived experience.** I am both the developer and someone living with an anxiety disorder. I have long used NeuroTrack to record my own pressure, so its choices grow out of everyday use rather than occasional testing.
+- **Questions written with care.** The weekly reflection was designed around anxiety and related neurotic distress. It avoids blunt labels, invasive wording, and judgment, using concrete questions that feel more respectful and relevant.
+- **Simple, approachable, and open.** The app is intentionally calm and easy to learn. Its source code is open for inspection, and sensitive records stay on the device by default.
+
 ## Why I rebuilt it
 
 I first wrote NeuroTrack because I wanted to notice pressure changing before it became overwhelming. After anxiety or something similar, the hardest stage can pass while the fear of sliding backwards stays around.
