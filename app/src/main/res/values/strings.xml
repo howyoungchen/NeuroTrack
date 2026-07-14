@@ -20,7 +20,7 @@
 
     <string name="practice_title">练习与回顾</string>
     <string name="practice_subtitle">完成一份周回顾，也在本轮内走完六节引导正念课程。</string>
-    <string name="practice_weekly_rhythm">本轮进度</string>
+    <string name="practice_weekly_rhythm">本轮正念</string>
     <string name="practice_completed_format">已完成 %1$d / 6 节正念课程</string>
     <string name="practice_schedule">每%1$s 05:00 开启新一轮；六节可按任意顺序完成。</string>
     <string name="practice_round_complete">本轮六节课程已全部完成。</string>
@@ -32,6 +32,9 @@
     <string name="weekly_review_day_only">问答仅在每%1$s开放。</string>
     <string name="mindfulness_title">正念练习</string>
     <string name="mindfulness_desc">六节引导音频保存在本机。每节完整播放一次即计入本轮，也可以随时重听。</string>
+    <string name="mindfulness_courses_entry">查看本轮课程</string>
+    <string name="mindfulness_courses_title">本轮课程</string>
+    <string name="mindfulness_lesson_completed">已完成</string>
     <string name="mindfulness_source_credit">音频由 NSW Multicultural Health Communication Service 提供；中文界面播放普通话版。</string>
     <string name="mindfulness_start_lesson">开始本节</string>
     <string name="mindfulness_replay">重新播放</string>
@@ -101,8 +104,13 @@
 
     <string name="settings_title">设置</string>
     <string name="settings_subtitle">选择适合自己的每周节奏；记录与音频仍只留在本机。</string>
+    <string name="settings_section_rhythm">每周节奏</string>
+    <string name="settings_section_preferences">偏好</string>
+    <string name="settings_section_information">信息</string>
     <string name="settings_refresh_day">每周刷新日</string>
+    <string name="settings_refresh_day_summary">每%1$s 05:00 刷新，%2$s开放周回顾</string>
     <string name="settings_refresh_day_desc">当前每%1$s 05:00 生成上一轮压力并开启新一轮；问答在前一天（%2$s）开放。</string>
+    <string name="settings_choose_refresh_day">选择每周刷新日</string>
     <string name="settings_reminder">周回顾提醒</string>
     <string name="settings_reminder_days">若到%1$s 22:00 仍未完成问答，应用会提醒一次。</string>
     <string name="settings_permission">通知权限</string>
@@ -110,13 +118,19 @@
     <string name="permission_granted">已允许</string>
     <string name="permission_missing">去允许</string>
     <string name="settings_language">语言</string>
+    <string name="settings_language_desc">界面与引导音频使用此语言</string>
+    <string name="settings_choose_language">选择语言</string>
     <string name="settings_theme">外观</string>
+    <string name="settings_theme_desc">控制应用的明暗显示</string>
+    <string name="settings_choose_theme">选择外观</string>
     <string name="language_zh">中文</string>
     <string name="language_en">English</string>
     <string name="theme_system">跟随系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
     <string name="settings_about">关于</string>
+    <string name="settings_about_desc">版本、隐私与使用边界</string>
+    <string name="settings_local_only">所有记录与音频仅保存在本机。</string>
     <string name="about_version">版本 %1$s</string>
     <string name="disclaimer">NeuroTrack 仅用于自我观察与正念练习，不构成医疗诊断或治疗建议。如持续感到痛苦或有伤害自己的风险，请及时寻求专业帮助。</string>
 

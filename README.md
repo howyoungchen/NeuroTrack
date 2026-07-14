@@ -12,7 +12,7 @@
   </p>
 </div>
 
-![NeuroTrack brings weekly reflection, mindfulness, and local-first privacy into one calm view](docs/images/neurotrack-readme-hero-en.svg)
+<img src="docs/images/neurotrack-readme-hero-en.svg" width="100%" alt="NeuroTrack brings weekly reflection, mindfulness, and local-first privacy into one calm view">
 
 <div align="center">
   <strong><a href="https://github.com/howyoungchen/NeuroTrack/releases/latest">Download the latest release</a></strong>
@@ -27,15 +27,15 @@ These are real screens from the current development build on Android 16. Their c
 <table>
   <tr>
     <td width="25%"><img src="docs/images/screenshots/status-en.png" alt="Status screen with the previous week's pressure and an eight-week trend"></td>
-    <td width="25%"><img src="docs/images/screenshots/practice-en.png" alt="Practice screen with weekly reflection and guided mindfulness"></td>
+    <td width="25%"><img src="docs/images/screenshots/practice-en.png" alt="Practice screen with this round's mindfulness progress and course drawer entry"></td>
     <td width="25%"><img src="docs/images/screenshots/reflection-en.png" alt="Past-week reflection showing one concrete question at a time"></td>
     <td width="25%"><img src="docs/images/screenshots/settings-en.png" alt="Settings screen with weekly refresh day, notification permission, language, and appearance"></td>
   </tr>
   <tr>
     <td align="center"><strong>Last week, not today</strong><br><sub>Generated after the week has closed</sub></td>
-    <td align="center"><strong>Six guided courses</strong><br><sub>One complete round each week</sub></td>
+    <td align="center"><strong>This round’s mindfulness</strong><br><sub>Progress and six courses in one entry</sub></td>
     <td align="center"><strong>Ten concrete questions</strong><br><sub>Daily life instead of abstract labels</sub></td>
-    <td align="center"><strong>Restrained settings</strong><br><sub>Only what the app genuinely needs</sub></td>
+    <td align="center"><strong>Grouped settings</strong><br><sub>Current values first, choices on demand</sub></td>
   </tr>
 </table>
 
@@ -54,6 +54,8 @@ One rule has stayed with me from the beginning: **the app itself must not become
 ## The rhythm I wanted
 
 Each weekly round contains six guided mindfulness courses: sensory grounding, mindful breathing, body scan, leaves on a stream, loving kindness and self-compassion, and sitting with difficult emotions. I can complete them in any order. The screen is pinned during playback, and leaving the app interrupts the course rather than silently counting it as complete.
+
+The Practice screen now keeps progress and all six courses inside “This round’s mindfulness.” The main page stays quiet; “View this round’s courses” opens a bottom drawer where I can choose a course, read its details, and begin.
 
 Once a week, I look back through ten questions. They do not vaguely ask whether I feel anxious. They ask about sleep, phone switching, disagreement, work, relationships, surroundings, physical signals, and rest.
 
@@ -85,12 +87,12 @@ NeuroTrack does not decide whether you are ill or relapsing, and it does not tel
 | --- | --- |
 | What was the past week actually like? | A ten-question reflection grounded in ordinary life |
 | Is pressure slowly accumulating? | One 0–10 weekly score combining reflection and mindfulness completion |
-| Did I really stop for a while? | One weekly round of six guided courses, each recorded as completed or interrupted |
+| Did I really stop for a while? | “This round’s mindfulness” keeps progress and all six courses together, recording each as completed or interrupted |
 | Will I reach for another app during practice? | The screen is pinned; leaving, unpinning, or switching apps interrupts the session |
 | Do I need to keep watching it? | Status shows the most recently completed week and the recent eight-week change |
 | Where does the data go? | Reflections and practice records stay on the device with cloud backup disabled |
 
-The app supports English and Chinese, plus system, light, and dark themes.
+The app supports English and Chinese, plus system, light, and dark themes. Settings show only current values on the main page; refresh day, language, and appearance use a shared bottom selection panel.
 
 ## What I deliberately left out
 

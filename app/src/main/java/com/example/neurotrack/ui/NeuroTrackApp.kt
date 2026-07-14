@@ -1,19 +1,14 @@
 package com.example.neurotrack.ui
 
-import android.Manifest
 import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.os.Build
 import android.os.LocaleList
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivityResultRegistryOwner
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -37,13 +32,11 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -52,10 +45,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.Language
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.SelfImprovement
@@ -104,18 +94,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.neurotrack.BuildConfig
 import com.example.neurotrack.R
-import com.example.neurotrack.SettingsStore
 import com.example.neurotrack.domain.MindfulnessSessionStatus
 import com.example.neurotrack.domain.MindfulnessSchedule
 import com.example.neurotrack.domain.StressBand
 import com.example.neurotrack.domain.WeeklyStressPoint
-import com.example.neurotrack.mindfulness.MindfulnessLesson
 import com.example.neurotrack.mindfulness.MindfulnessLessons
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
@@ -427,7 +413,13 @@ private fun PracticeScreen(
                 Icons.Rounded.SelfImprovement,
             )
         }
-        item { WeeklyRoundProgress(completedLessonIds, refreshDayLabel) }
+        item {
+            MindfulnessRoundCard(
+                completedLessonIds = completedLessonIds,
+                refreshDayLabel = refreshDayLabel,
+                onStartMindfulness = onStartMindfulness,
+            )
+        }
         item {
             FeatureCard(
                 icon = Icons.Rounded.CheckCircle,
@@ -455,117 +447,6 @@ private fun PracticeScreen(
                 ) {
                     Text(stringResource(if (thisWeekReviewed) R.string.weekly_review_again else R.string.weekly_review_start))
                 }
-            }
-        }
-        item {
-            FeatureCard(
-                icon = Icons.Rounded.Headphones,
-                title = stringResource(R.string.mindfulness_title),
-                body = stringResource(R.string.mindfulness_desc),
-                accent = MaterialTheme.colorScheme.primary,
-            ) {
-                Text(
-                    stringResource(R.string.mindfulness_source_credit),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-        items(MindfulnessLessons.all, key = MindfulnessLesson::id) { lesson ->
-            MindfulnessLessonCard(
-                lesson = lesson,
-                completed = lesson.id in completedLessonIds,
-                onStart = { onStartMindfulness(lesson.id) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun WeeklyRoundProgress(
-    completedLessonIds: Set<Int>,
-    refreshDayLabel: String,
-) {
-    SectionCard(Icons.Rounded.Timeline, stringResource(R.string.practice_weekly_rhythm)) {
-        Text(
-            stringResource(R.string.practice_completed_format, completedLessonIds.size),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            stringResource(R.string.practice_schedule, refreshDayLabel),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(Modifier.fillMaxWidth().height(7.dp).background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)) {
-            Box(
-                Modifier.fillMaxWidth(completedLessonIds.size / MindfulnessSchedule.LESSON_COUNT.toFloat())
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.secondary, CircleShape),
-            )
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            MindfulnessSchedule.lessonIds.forEach { lessonId ->
-                val completed = lessonId in completedLessonIds
-                Surface(
-                    shape = CircleShape,
-                    color = if (completed) MaterialTheme.colorScheme.secondaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainer,
-                    modifier = Modifier.size(42.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (completed) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
-                        else Text(lessonId.toString(), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-        if (completedLessonIds.size == MindfulnessSchedule.LESSON_COUNT) {
-            Text(
-                stringResource(R.string.practice_round_complete),
-                color = MaterialTheme.colorScheme.secondary,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MindfulnessLessonCard(
-    lesson: MindfulnessLesson,
-    completed: Boolean,
-    onStart: () -> Unit,
-) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = if (completed) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.48f)
-        else MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Surface(
-                    shape = CircleShape,
-                    color = if (completed) MaterialTheme.colorScheme.secondaryContainer
-                    else MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(46.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (completed) Icon(Icons.Rounded.CheckCircle, null, tint = MaterialTheme.colorScheme.secondary)
-                        else Text(lesson.id.toString(), fontWeight = FontWeight.Bold)
-                    }
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(stringResource(lesson.titleRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        stringResource(lesson.durationRes),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            Text(stringResource(lesson.descriptionRes), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) {
-                Icon(if (completed) Icons.Rounded.Replay else Icons.Rounded.PlayArrow, null)
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(if (completed) R.string.mindfulness_replay else R.string.mindfulness_start_lesson))
             }
         }
     }
@@ -764,118 +645,6 @@ private fun MindfulnessSessionScreen(
 }
 
 @Composable
-private fun SettingsScreen(
-    settings: com.example.neurotrack.AppSettings,
-    onRefreshDay: (DayOfWeek) -> Unit,
-    onLanguage: (String) -> Unit,
-    onTheme: (String) -> Unit,
-) {
-    val context = LocalContext.current
-    val refreshDayLabel = weekdayLabel(settings.refreshDay)
-    val assessmentDayLabel = weekdayLabel(MindfulnessSchedule.assessmentDay(settings.refreshDay))
-    var notificationGranted by remember { mutableStateOf(context.notificationsGranted()) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        notificationGranted = it
-    }
-    PageList {
-        item {
-            PageHeader(
-                R.string.settings_title,
-                stringResource(R.string.settings_subtitle),
-                Icons.Rounded.Settings,
-            )
-        }
-        item {
-            SectionCard(Icons.Rounded.Timeline, stringResource(R.string.settings_refresh_day)) {
-                Text(
-                    stringResource(
-                        R.string.settings_refresh_day_desc,
-                        refreshDayLabel,
-                        assessmentDayLabel,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                DayOfWeek.entries.chunked(4).forEach { days ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        days.forEach { day ->
-                            ChoicePill(
-                                selected = settings.refreshDay == day,
-                                text = weekdayLabel(day),
-                                onClick = { onRefreshDay(day) },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            SectionCard(Icons.Rounded.Notifications, stringResource(R.string.settings_reminder)) {
-                Text(
-                    stringResource(R.string.settings_reminder_days, assessmentDayLabel),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.settings_permission), style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            stringResource(R.string.settings_permission_desc, assessmentDayLabel),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    OutlinedButton(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }, enabled = !notificationGranted) {
-                        Text(stringResource(if (notificationGranted) R.string.permission_granted else R.string.permission_missing))
-                    }
-                }
-            }
-        }
-        item {
-            SectionCard(Icons.Rounded.Language, stringResource(R.string.settings_language)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ChoicePill(settings.languageTag == SettingsStore.LANGUAGE_ZH, stringResource(R.string.language_zh), { onLanguage(SettingsStore.LANGUAGE_ZH) }, Modifier.weight(1f))
-                    ChoicePill(settings.languageTag == SettingsStore.LANGUAGE_EN, stringResource(R.string.language_en), { onLanguage(SettingsStore.LANGUAGE_EN) }, Modifier.weight(1f))
-                }
-            }
-        }
-        item {
-            SectionCard(Icons.Rounded.Palette, stringResource(R.string.settings_theme)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(
-                        SettingsStore.THEME_SYSTEM to R.string.theme_system,
-                        SettingsStore.THEME_LIGHT to R.string.theme_light,
-                        SettingsStore.THEME_DARK to R.string.theme_dark,
-                    ).forEach { (value, label) ->
-                        ChoicePill(settings.themeMode == value, stringResource(label), { onTheme(value) }, Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-        item {
-            SectionCard(Icons.Rounded.Favorite, stringResource(R.string.settings_about)) {
-                Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME))
-                Text(stringResource(R.string.disclaimer), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoicePill(selected: Boolean, text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        shape = CircleShape,
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-        modifier = modifier.heightIn(min = 46.dp).clickable(onClick = onClick),
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 8.dp)) {
-            Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
-        }
-    }
-}
-
-@Composable
 private fun FeatureCard(
     icon: ImageVector,
     title: String,
@@ -911,7 +680,7 @@ private fun SectionCard(icon: ImageVector, title: String, content: @Composable C
 }
 
 @Composable
-private fun PageHeader(title: Int, subtitle: String, icon: ImageVector) {
+internal fun PageHeader(title: Int, subtitle: String, icon: ImageVector) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
         Text(stringResource(title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
@@ -920,11 +689,11 @@ private fun PageHeader(title: Int, subtitle: String, icon: ImageVector) {
 }
 
 @Composable
-private fun weekdayLabel(day: DayOfWeek): String =
+internal fun weekdayLabel(day: DayOfWeek): String =
     stringArrayResource(R.array.weekday_names)[day.value - 1]
 
 @Composable
-private fun PageList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+internal fun PageList(content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     Box(Modifier.fillMaxSize()) {
         LazyColumn(
             contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 32.dp),
@@ -952,10 +721,6 @@ private fun stressBandLabel(band: StressBand?): String = stringResource(
         null -> R.string.status_no_score
     },
 )
-
-private fun Context.notificationsGranted(): Boolean =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this

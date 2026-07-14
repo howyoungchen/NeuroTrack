@@ -12,7 +12,7 @@
   </p>
 </div>
 
-![NeuroTrack：每周回顾压力，完成正念练习，数据留在本机](docs/images/neurotrack-readme-hero-zh.svg)
+<img src="docs/images/neurotrack-readme-hero-zh.svg" width="100%" alt="NeuroTrack：每周回顾压力，完成正念练习，数据留在本机">
 
 <div align="center">
   <strong><a href="https://github.com/howyoungchen/NeuroTrack/releases/latest">下载最新版本</a></strong>
@@ -27,15 +27,15 @@
 <table>
   <tr>
     <td width="25%"><img src="docs/images/screenshots/status.png" alt="状态页：上周压力与最近八周趋势"></td>
-    <td width="25%"><img src="docs/images/screenshots/practice.png" alt="练习页：周回顾与六节引导正念"></td>
+    <td width="25%"><img src="docs/images/screenshots/practice.png" alt="练习页：本轮正念进度与课程抽屉入口"></td>
     <td width="25%"><img src="docs/images/screenshots/reflection.png" alt="过去一周回顾：一次回答一个具体问题"></td>
     <td width="25%"><img src="docs/images/screenshots/settings.png" alt="设置页：每周刷新日、通知权限、语言与外观"></td>
   </tr>
   <tr>
     <td align="center"><strong>上周的状态</strong><br><sub>一周结束后再形成结论</sub></td>
-    <td align="center"><strong>六节引导课程</strong><br><sub>每周完整走完一轮</sub></td>
+    <td align="center"><strong>本轮正念</strong><br><sub>进度与六节课程收进同一入口</sub></td>
     <td align="center"><strong>十个具体问题</strong><br><sub>回看真实生活，不做抽象打分</sub></td>
-    <td align="center"><strong>克制的设置</strong><br><sub>只留下真正需要的选项</sub></td>
+    <td align="center"><strong>分组设置</strong><br><sub>主页只显示当前值，需要时再展开</sub></td>
   </tr>
 </table>
 
@@ -54,6 +54,8 @@
 ## 我想要的是这样的节奏
 
 每一轮包含六节引导正念：感官觉察、正念呼吸、身体扫描、溪流上的树叶、慈爱与自我关怀，以及与困难情绪共处。六节可以按任意顺序完成。播放时屏幕会固定；离开应用会中断本节，而不会悄悄算作完成。
+
+练习页把进度与六节课程统一收在“本轮正念”里：主页安静地显示本轮完成情况，点“查看本轮课程”后，再在底部抽屉中选择课程、阅读说明并开始练习。
 
 每周再做一次回顾。十个问题不会泛泛地问“你焦虑吗”，而是问睡眠感受、手机切换、不同观点、工作状态、关系、环境、身体信号和休息。
 
@@ -85,12 +87,12 @@ flowchart LR
 | --- | --- |
 | 过去一周到底怎么样 | 用 10 个贴近日常的问题，完成一次周回顾 |
 | 压力是不是在慢慢积累 | 把周回顾与正念完成情况合成 0–10 的周压力 |
-| 我有没有真的停下来 | 每周完成一轮六节引导课程，分别记录完成或中断 |
+| 我有没有真的停下来 | “本轮正念”集中显示进度与六节课程，并分别记录完成或中断 |
 | 练习时会不会又拿起手机 | 固定当前屏幕；离开、退出固定或切换 App 都算中断 |
 | 我需不需要一直盯着它 | 状态页只显示最近结束的一周和最近八周趋势 |
 | 数据会去哪里 | 周回顾与练习记录只保存在本机，不做云备份 |
 
-支持中文与 English，也支持跟随系统、浅色和深色主题。
+支持中文与 English，也支持跟随系统、浅色和深色主题。设置主页只显示当前值；刷新日、语言和外观在统一的底部选择面板中调整。
 
 ## 我刻意没有做的事
 

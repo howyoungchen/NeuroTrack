@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="auto" viewBox="0 0 1200 540" preserveAspectRatio="xMidYMid meet" style="display:block;max-width:1200px" role="img" aria-labelledby="title desc">
   <title id="title">NeuroTrack</title>
   <desc id="desc">Weekly pressure reflection, focused mindfulness, and data kept on the device</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FAFAFD"/><stop offset="0.58" stop-color="#F2F2FA"/><stop offset="1" stop-color="#E4E5FF"/></linearGradient>
     <linearGradient id="pressure" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2F8C78"/><stop offset="0.56" stop-color="#A77B00"/><stop offset="1" stop-color="#C43F32"/></linearGradient>
     <linearGradient id="practice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6169B1"/><stop offset="1" stop-color="#2F8C78"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="150%" height="155%"><feDropShadow dx="0" dy="14" stdDeviation="19" flood-color="#262B61" flood-opacity="0.13"/></filter>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="135%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#262B61" flood-opacity="0.13"/></filter>
   </defs>
 
   <rect width="1200" height="540" rx="40" fill="url(#bg)"/>
-  <circle cx="1110" cy="62" r="158" fill="#BCEEDC" opacity="0.48"/>
-  <circle cx="45" cy="548" r="132" fill="#FFE7A9" opacity="0.42"/>
+  <circle cx="1080" cy="110" r="100" fill="#BCEEDC" opacity="0.48"/>
+  <circle cx="68" cy="450" r="78" fill="#FFE7A9" opacity="0.42"/>
   <path d="M570 55c52 18 74 63 57 106-17 42-68 65-115 45-46-19-68-68-48-108 20-40 59-58 106-43Z" fill="#DCDDFE" opacity="0.42"/>
 
   <g transform="translate(72 0)">
@@ -39,10 +39,12 @@
     </g>
     <g transform="translate(28 218)">
       <rect width="226" height="198" rx="25" fill="#F3F3FB"/>
-      <text x="20" y="36" fill="#171820" font-family="Segoe UI, sans-serif" font-size="17" font-weight="600">Six-course round</text>
-      <text x="20" y="61" fill="#747580" font-family="Segoe UI, sans-serif" font-size="13">Complete in any order</text>
+      <text x="20" y="36" fill="#171820" font-family="Segoe UI, sans-serif" font-size="16" font-weight="600">Round mindfulness</text>
+      <text x="20" y="61" fill="#747580" font-family="Segoe UI, sans-serif" font-size="13">1 / 6 courses complete</text>
       <g transform="translate(20 82)"><circle cx="17" cy="22" r="17" fill="#D8DAFF"/><path d="M10 22l5 5 10-12" fill="none" stroke="#515AA3" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="55" cy="22" r="17" fill="#E8E8EF"/><circle cx="93" cy="22" r="17" fill="#E8E8EF"/><circle cx="131" cy="22" r="17" fill="#E8E8EF"/><circle cx="169" cy="22" r="17" fill="#E8E8EF"/><circle cx="207" cy="22" r="17" fill="#E8E8EF"/></g>
-      <path d="M20 156C52 144 65 166 92 151s43-4 60-16 31-6 54-22" fill="none" stroke="#515AA3" stroke-width="4" stroke-linecap="round"/>
+      <rect x="20" y="132" width="186" height="43" rx="15" fill="#E4E5F5"/>
+      <text x="40" y="159" fill="#454D92" font-family="Segoe UI, sans-serif" font-size="13" font-weight="600">View courses</text>
+      <path d="M183 148l7 6-7 6" fill="none" stroke="#656673" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </g>
     <g transform="translate(270 218)">
       <rect width="148" height="198" rx="25" fill="#EAF7F3"/>
